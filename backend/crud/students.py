@@ -4,8 +4,17 @@ from backend.models.attendance import AttendanceLog
 from backend.models.enrollments import Enrollment
 from backend.schemas.students import StudentCreate
 
-def get_students(db: Session, user_id: int, skip: int = 0, limit: int = 100):
-    return db.query(Student).filter(Student.owner_id == user_id).offset(skip).limit(limit).all()
+from sqlalchemy import or_
+
+def get_students(db: Session, user_id: int, skip: int = 0, limit: int = 100, search: str = None):
+    query = db.query(Student).filter(Student.owner_id == user_id)
+    if search:
+        search_filter = f"%{search}%"
+        query = query.filter(or_(
+            Student.name.ilike(search_filter),
+            Student.parent_name.ilike(search_filter)
+        ))
+    return query.offset(skip).limit(limit).all()
 
 def create_student(db: Session, student: StudentCreate, user_id: int):
     db_student = Student(**student.model_dump(), owner_id=user_id)

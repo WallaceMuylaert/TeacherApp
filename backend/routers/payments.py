@@ -14,11 +14,14 @@ def read_payments(
     student_id: Optional[int] = None, 
     year: Optional[int] = None, 
     month: Optional[int] = None,
+    skip: int = 0,
+    limit: int = 100,
+    search: Optional[str] = None,
     db: Session = Depends(database.get_db), 
     current_user: user_schemas.User = Depends(security.get_current_user)
 ):
     # In a real app, restrict to students owned by user, but skipping complex join for brevity
-    return payment_crud.get_payments(db, student_id=student_id, year=year, month=month)
+    return payment_crud.get_payments(db, student_id=student_id, year=year, month=month, skip=skip, limit=limit, search=search)
 
 @router.post("/payments/", response_model=payment_schemas.Payment)
 def create_payment(

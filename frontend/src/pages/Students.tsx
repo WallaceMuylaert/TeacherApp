@@ -18,9 +18,11 @@ interface ClassModel {
 
 export const Students = () => {
     const [students, setStudents] = useState<Student[]>([]);
-    const [filteredStudents, setFilteredStudents] = useState<Student[]>([]);
+    // const [filteredStudents, setFilteredStudents] = useState<Student[]>([]); // Removed: Server side filtering
     const [classes, setClasses] = useState<ClassModel[]>([]);
     const [search, setSearch] = useState('');
+    const [page, setPage] = useState(0);
+    const [limit] = useState(10); // Items per page
     const [isLoading, setIsLoading] = useState(true);
 
     // Modal States
@@ -34,24 +36,25 @@ export const Students = () => {
     const [deletingStudent, setDeletingStudent] = useState<Student | null>(null);
 
     useEffect(() => {
-        fetchData();
         fetchClasses();
     }, []);
 
+    // Debounce search and fetch
     useEffect(() => {
-        const lower = search.toLowerCase();
-        setFilteredStudents(students.filter(s =>
-            s.name.toLowerCase().includes(lower) ||
-            s.parent_name?.toLowerCase().includes(lower)
-        ));
-    }, [search, students]);
+        const timeoutId = setTimeout(() => {
+            fetchData();
+        }, 500);
+        return () => clearTimeout(timeoutId);
+    }, [search, page]);
 
     const fetchData = async () => {
+        setIsLoading(true);
         try {
-            const res = await api.get('/students/');
+            const skip = page * limit;
+            const res = await api.get(`/students/?skip=${skip}&limit=${limit}&search=${search}`);
             setStudents(res.data);
-            setIsLoading(false);
-        } catch (e) { console.error(e); setIsLoading(false); }
+        } catch (e) { console.error(e); }
+        finally { setIsLoading(false); }
     };
 
     const fetchClasses = async () => {
@@ -140,7 +143,7 @@ export const Students = () => {
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-white/5">
-                            {filteredStudents.map(student => (
+                            {students.map(student => (
                                 <tr key={student.id} className="hover:bg-white/5 transition-colors">
                                     <td className="p-4">
                                         <div className="font-medium text-white">{student.name}</div>
@@ -177,13 +180,32 @@ export const Students = () => {
                                     </td>
                                 </tr>
                             ))}
-                            {filteredStudents.length === 0 && !isLoading && (
+                            {students.length === 0 && !isLoading && (
                                 <tr>
                                     <td colSpan={4} className="p-8 text-center text-text-muted italic">Nenhum aluno encontrado.</td>
                                 </tr>
                             )}
                         </tbody>
                     </table>
+                </div>
+
+                {/* Pagination Controls */}
+                <div className="flex justify-between items-center p-4 border-t border-white/5 bg-black/20">
+                    <button
+                        onClick={() => setPage(p => Math.max(0, p - 1))}
+                        disabled={page === 0}
+                        className="px-4 py-2 bg-white/5 hover:bg-white/10 disabled:opacity-50 disabled:cursor-not-allowed rounded-lg text-sm text-white transition-colors"
+                    >
+                        Anterior
+                    </button>
+                    <span className="text-text-muted text-sm">Página {page + 1}</span>
+                    <button
+                        onClick={() => setPage(p => p + 1)}
+                        disabled={students.length < limit}
+                        className="px-4 py-2 bg-white/5 hover:bg-white/10 disabled:opacity-50 disabled:cursor-not-allowed rounded-lg text-sm text-white transition-colors"
+                    >
+                        Próxima
+                    </button>
                 </div>
             </div>
 

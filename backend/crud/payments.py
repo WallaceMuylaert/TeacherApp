@@ -3,15 +3,21 @@ from backend.models.payments import Payment
 from backend.schemas.payments import PaymentCreate
 from typing import List, Optional
 
-def get_payments(db: Session, student_id: Optional[int] = None, year: Optional[int] = None, month: Optional[int] = None):
-    query = db.query(Payment)
+from backend.models.students import Student
+
+def get_payments(db: Session, student_id: Optional[int] = None, year: Optional[int] = None, month: Optional[int] = None, skip: int = 0, limit: int = 100, search: Optional[str] = None):
+    query = db.query(Payment).join(Student, Payment.student_id == Student.id)
+    
     if student_id:
         query = query.filter(Payment.student_id == student_id)
     if year:
         query = query.filter(Payment.year == year)
     if month:
         query = query.filter(Payment.month == month)
-    return query.all()
+    if search:
+        query = query.filter(Student.name.ilike(f"%{search}%"))
+        
+    return query.offset(skip).limit(limit).all()
 
 def create_payment(db: Session, payment: PaymentCreate):
     db_payment = Payment(
