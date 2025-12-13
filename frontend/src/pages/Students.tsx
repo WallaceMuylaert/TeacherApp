@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import api from '../api';
-import { Plus, Search, Pencil, Trash, X, AlertTriangle, UserCircle, LineChart as LineChartIcon } from 'lucide-react';
+import { Plus, Search, Pencil, Trash, X, AlertTriangle, UserCircle, LineChart as LineChartIcon, Download } from 'lucide-react';
+import html2canvas from 'html2canvas';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import { Loading } from '../components/Loading';
 
@@ -82,9 +83,7 @@ export const Students = () => {
         try {
             const res = await api.post('/students/', newStudentData);
             if (selectedClassId) {
-                if (selectedClassId) {
-                    await api.post(`/classes/${selectedClassId}/enroll/${res.data.id}`);
-                }
+                await api.post(`/classes/${selectedClassId}/enroll/${res.data.id}`);
             }
             setShowCreateModal(false);
             setNewStudentData({ name: '', phone: '', parent_name: '', parent_phone: '', parent_email: '' });
@@ -100,7 +99,7 @@ export const Students = () => {
             await api.put(`/students/${editingStudent.id}`, editStudentData);
             setEditingStudent(null);
             fetchData();
-        } catch (e) { alert('Erro ao atualizar'); }
+        } catch (e) { alert('Erro ao atualizar aluno'); }
     };
 
     const handleDeleteStudent = async () => {
@@ -109,7 +108,47 @@ export const Students = () => {
             await api.delete(`/students/${deletingStudent.id}`);
             setDeletingStudent(null);
             fetchData();
-        } catch (e) { alert('Erro ao excluir'); }
+        } catch (e) { alert('Erro ao excluir aluno'); }
+    };
+
+    const handleDownloadReport = async () => {
+        if (!viewingEvolution) return;
+
+        const chartElement = document.getElementById('evolution-chart-container');
+        let chartImage = null;
+
+        if (chartElement && evolutionData.length > 0) {
+            try {
+                // Capture chart with html2canvas
+                const canvas = await html2canvas(chartElement, {
+                    backgroundColor: '#1f2937' // Match bg-bg-card
+                });
+                chartImage = canvas.toDataURL('image/png');
+            } catch (err) {
+                console.error("Erro ao capturar gráfico", err);
+            }
+        }
+
+        try {
+            // Updated to use POST and send chart image
+            const response = await api.post(`/students/${viewingEvolution.id}/report/docx`, {
+                chart_image: chartImage
+            }, {
+                responseType: 'blob'
+            });
+
+            // Create download link
+            const url = window.URL.createObjectURL(new Blob([response.data]));
+            const link = document.createElement('a');
+            link.href = url;
+            link.setAttribute('download', `Relatorio_${viewingEvolution.name.replace(/\s+/g, '_')}.docx`);
+            document.body.appendChild(link);
+            link.click();
+            link.remove();
+        } catch (error) {
+            console.error(error);
+            alert('Erro ao gerar relatório');
+        }
     };
 
     const handleViewEvolution = async (student: Student) => {
@@ -349,9 +388,19 @@ export const Students = () => {
                 <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4 animate-fade-in">
                     <div className="glass-card w-full max-w-4xl p-8 animate-slide-up relative">
                         <button onClick={() => setViewingEvolution(null)} className="absolute top-4 right-4 text-text-muted hover:text-white"><X size={20} /></button>
-                        <h3 className="text-2xl font-bold text-white mb-6">Evolução: {viewingEvolution.name}</h3>
 
-                        <div className="h-[400px] w-full">
+                        <div className="flex justify-between items-center mb-6">
+                            <h3 className="text-2xl font-bold text-white">Evolução: {viewingEvolution.name}</h3>
+                            <button
+                                onClick={handleDownloadReport}
+                                className="flex items-center gap-2 px-4 py-2 bg-success/20 text-success hover:bg-success hover:text-white rounded-lg transition-colors font-medium text-sm"
+                            >
+                                <Download size={18} />
+                                Baixar Relatório
+                            </button>
+                        </div>
+
+                        <div id="evolution-chart-container" className="h-[400px] w-full bg-bg-card p-4 rounded-xl">
                             {evolutionData.length > 0 ? (
                                 <ResponsiveContainer width="100%" height="100%">
                                     <LineChart data={evolutionData}>

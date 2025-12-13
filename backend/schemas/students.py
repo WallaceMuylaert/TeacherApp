@@ -22,3 +22,6 @@ class StudentEvolutionPoint(BaseModel):
     date: datetime.date
     grade: Optional[float] = None
     status: str
+
+class StudentReportRequest(BaseModel):
+    chart_image: Optional[str] = None

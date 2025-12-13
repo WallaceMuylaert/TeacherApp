@@ -381,10 +381,13 @@ export const ClassDetails = () => {
         const payload = {
             date: sessionDate,
             description: sessionDesc,
-            logs: logs.map(l => ({
-                ...l,
-                grade: l.grade === '' ? null : Number(l.grade)
-            }))
+            logs: logs.map(l => {
+                const gradeNum = l.grade === '' ? null : Number(l.grade);
+                return {
+                    ...l,
+                    grade: isNaN(gradeNum as number) ? null : gradeNum
+                };
+            })
         };
 
         try {
