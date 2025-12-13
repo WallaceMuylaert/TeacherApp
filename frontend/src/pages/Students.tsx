@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import api from '../api';
 import { Plus, Search, Pencil, Trash, X, AlertTriangle, UserCircle, LineChart as LineChartIcon } from 'lucide-react';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
+import { Loading } from '../components/Loading';
 
 interface Student {
     id: number;
@@ -154,7 +155,12 @@ export const Students = () => {
             </div>
 
             {/* Table */}
-            <div className="glass-card overflow-hidden">
+            <div className="glass-card overflow-hidden relative min-h-[400px]">
+                {isLoading && (
+                    <div className="absolute inset-0 z-50 flex items-center justify-center bg-bg-card/60 backdrop-blur-sm rounded-xl">
+                        <Loading text="Carregando alunos..." />
+                    </div>
+                )}
                 <div className="overflow-x-auto">
                     <table className="w-full">
                         <thead className="bg-black/20">

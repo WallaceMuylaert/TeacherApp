@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import api from '../api';
 import { Plus, Calendar, Pencil, Trash, X, AlertTriangle } from 'lucide-react';
 import { Link } from 'react-router-dom';
+import { Loading } from '../components/Loading';
 
 interface ClassModel {
     id: number;
@@ -13,6 +14,7 @@ export const Dashboard = () => {
     const [classes, setClasses] = useState<ClassModel[]>([]);
     const [showModal, setShowModal] = useState(false);
     const [newClass, setNewClass] = useState({ name: '', schedule: '' });
+    const [isLoading, setIsLoading] = useState(true);
 
     // Edit/Delete State
     const [editingClass, setEditingClass] = useState<ClassModel | null>(null);
@@ -21,11 +23,14 @@ export const Dashboard = () => {
     const [deletingClass, setDeletingClass] = useState<ClassModel | null>(null);
 
     const fetchClasses = async () => {
+        setIsLoading(true);
         try {
             const res = await api.get('/classes/');
             setClasses(res.data);
         } catch (error) {
             console.error(error);
+        } finally {
+            setIsLoading(false);
         }
     };
 
@@ -82,46 +87,52 @@ export const Dashboard = () => {
 
     return (
         <div>
-            <div className="grid gap-6 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 animate-slide-up">
-                {classes.map((cls, index) => (
-                    <Link
-                        key={cls.id}
-                        to={`/class/${cls.id}`}
-                        className="glass-card p-6 group hover:translate-y-[-5px] transition-all duration-300 block no-underline text-inherit border-l-4 border-l-transparent hover:border-l-primary"
-                        style={{ animationDelay: `${index * 100}ms` }}
+            {isLoading ? (
+                <div className="h-[50vh] flex items-center justify-center">
+                    <Loading text="Carregando turmas..." />
+                </div>
+            ) : (
+                <div className="grid gap-6 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 animate-slide-up">
+                    {classes.map((cls, index) => (
+                        <Link
+                            key={cls.id}
+                            to={`/class/${cls.id}`}
+                            className="glass-card p-6 group hover:translate-y-[-5px] transition-all duration-300 block no-underline text-inherit border-l-4 border-l-transparent hover:border-l-primary"
+                            style={{ animationDelay: `${index * 100}ms` }}
+                        >
+                            <div className="flex justify-between items-start">
+                                <div>
+                                    <h3 className="text-xl font-bold mb-2 text-text-main group-hover:text-primary-light transition-colors">{cls.name}</h3>
+                                    <p className="text-text-muted text-sm flex items-center gap-2">
+                                        <Calendar size={14} className="text-primary" /> {cls.schedule}
+                                    </p>
+                                </div>
+                                <div className="flex gap-2">
+                                    <button onClick={(e) => openEditModal(e, cls)} className="bg-bg-dark/50 p-2 rounded-lg hover:bg-primary/20 text-text-muted hover:text-primary transition-colors">
+                                        <Pencil size={18} />
+                                    </button>
+                                    <button onClick={(e) => openDeleteModal(e, cls)} className="bg-bg-dark/50 p-2 rounded-lg hover:bg-danger/20 text-text-muted hover:text-danger transition-colors">
+                                        <Trash size={18} />
+                                    </button>
+                                </div>
+                            </div>
+                        </Link>
+                    ))}
+
+                    {/* Add Class Card Button */}
+                    <button
+                        onClick={() => setShowModal(true)}
+                        className="glass-card p-6 flex flex-col items-center justify-center gap-4 group hover:bg-white/5 transition-all border-dashed border-2 border-border hover:border-primary cursor-pointer min-h-[150px]"
                     >
-                        <div className="flex justify-between items-start">
-                            <div>
-                                <h3 className="text-xl font-bold mb-2 text-text-main group-hover:text-primary-light transition-colors">{cls.name}</h3>
-                                <p className="text-text-muted text-sm flex items-center gap-2">
-                                    <Calendar size={14} className="text-primary" /> {cls.schedule}
-                                </p>
-                            </div>
-                            <div className="flex gap-2">
-                                <button onClick={(e) => openEditModal(e, cls)} className="bg-bg-dark/50 p-2 rounded-lg hover:bg-primary/20 text-text-muted hover:text-primary transition-colors">
-                                    <Pencil size={18} />
-                                </button>
-                                <button onClick={(e) => openDeleteModal(e, cls)} className="bg-bg-dark/50 p-2 rounded-lg hover:bg-danger/20 text-text-muted hover:text-danger transition-colors">
-                                    <Trash size={18} />
-                                </button>
-                            </div>
+                        <div className="bg-primary/10 p-4 rounded-full group-hover:scale-110 transition-transform">
+                            <Plus size={32} className="text-primary" />
                         </div>
-                    </Link>
-                ))}
+                        <span className="font-medium text-text-muted group-hover:text-white transition-colors">Criar Nova Turma</span>
+                    </button>
+                </div>
+            )}
 
-                {/* Add Class Card Button */}
-                <button
-                    onClick={() => setShowModal(true)}
-                    className="glass-card p-6 flex flex-col items-center justify-center gap-4 group hover:bg-white/5 transition-all border-dashed border-2 border-border hover:border-primary cursor-pointer min-h-[150px]"
-                >
-                    <div className="bg-primary/10 p-4 rounded-full group-hover:scale-110 transition-transform">
-                        <Plus size={32} className="text-primary" />
-                    </div>
-                    <span className="font-medium text-text-muted group-hover:text-white transition-colors">Criar Nova Turma</span>
-                </button>
-            </div>
-
-            {classes.length === 0 && (
+            {classes.length === 0 && !isLoading && (
                 <div className="text-center mt-12 animate-fade-in">
                     <p className="text-text-muted text-lg">Comece criando sua primeira turma acima.</p>
                 </div>

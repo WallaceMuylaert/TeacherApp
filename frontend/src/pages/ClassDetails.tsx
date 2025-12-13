@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import api from '../api';
 import { Plus, Save, Calendar, UserPlus, Users, X, FileText, Pencil, Trash2, AlertTriangle, Eye, Download } from 'lucide-react';
+import { Loading } from '../components/Loading';
 
 interface Student {
     id: number;
@@ -433,7 +434,11 @@ export const ClassDetails = () => {
         return students.find(s => s.id === id)?.name || "Aluno Removido";
     };
 
-    if (!classData) return <div>Carregando...</div>;
+    if (!classData) return (
+        <div className="h-screen flex items-center justify-center">
+            <Loading text="Carregando dados da turma..." />
+        </div>
+    );
 
     return (
         <div>

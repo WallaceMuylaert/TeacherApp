@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import api from '../api';
 import { DollarSign, CheckCircle, AlertCircle, Search } from 'lucide-react';
+import { Loading } from '../components/Loading';
 
 interface Student {
     id: number;
@@ -174,7 +175,12 @@ export const Payments = () => {
             </div>
 
             {/* Table */}
-            <div className="glass-card overflow-hidden">
+            <div className="glass-card overflow-hidden relative min-h-[400px]">
+                {loading && (
+                    <div className="absolute inset-0 z-50 flex items-center justify-center bg-bg-card/60 backdrop-blur-sm rounded-xl">
+                        <Loading text="Carregando financeiro..." />
+                    </div>
+                )}
                 <div className="p-4 border-b border-white/5 bg-white/5 flex items-center justify-between">
                     <h3 className="font-bold text-white">Relatório de {selectedMonth}/{selectedYear}</h3>
                 </div>
