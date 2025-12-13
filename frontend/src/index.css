@@ -1,0 +1,145 @@
+@import "tailwindcss";
+
+@theme {
+  --color-primary: #6366f1;
+  --color-primary-hover: #4f46e5;
+  --color-primary-light: #818cf8;
+
+  --color-bg-dark: #0f172a;
+  --color-bg-card: #1e293b;
+  --color-bg-darker: #020617;
+
+  --color-text-main: #f8fafc;
+  --color-text-muted: #94a3b8;
+
+  --color-danger: #ef4444;
+  --color-success: #22c55e;
+  --color-border: #334155;
+
+  --font-sans: Inter, system-ui, sans-serif;
+
+  --animate-fade-in: fadeIn 0.5s ease-out;
+  --animate-slide-up: slideUp 0.5s ease-out;
+  --animate-slide-in-right: slideInRight 0.3s ease-out;
+
+  @keyframes fadeIn {
+    0% {
+      opacity: 0;
+    }
+
+    100% {
+      opacity: 1;
+    }
+  }
+
+  @keyframes slideUp {
+    0% {
+      opacity: 0;
+      transform: translateY(20px);
+    }
+
+    100% {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  @keyframes slideInRight {
+    0% {
+      transform: translateX(100%);
+    }
+
+    100% {
+      transform: translateX(0);
+    }
+  }
+}
+
+:root {
+  --radius: 0.5rem;
+}
+
+@layer base {
+  body {
+    @apply bg-bg-dark text-text-main antialiased font-sans;
+  }
+}
+
+@layer components {
+  .btn {
+    @apply inline-flex items-center justify-center px-4 py-2 rounded-lg font-medium transition-all duration-200 border-none text-sm gap-2 cursor-pointer;
+  }
+
+  .btn-primary {
+    @apply bg-primary text-white hover:bg-primary-hover;
+  }
+
+  .btn-danger {
+    @apply bg-danger text-white hover:opacity-90;
+  }
+
+  .btn-outline {
+    @apply bg-transparent border border-border text-text-main hover:bg-white/5;
+  }
+
+  .input {
+    @apply w-full p-2 bg-slate-950 border border-border rounded-lg text-white mt-1 focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent;
+  }
+
+  .label {
+    @apply block text-sm text-text-muted mb-1;
+  }
+
+  .card {
+    @apply bg-bg-card border border-border rounded-lg p-6 shadow-md;
+  }
+
+  .table-container {
+    @apply overflow-x-auto w-full border border-border rounded-lg;
+  }
+
+  table {
+    @apply w-full border-collapse;
+  }
+
+  th,
+  td {
+    @apply p-3 text-left border-b border-border;
+  }
+
+  th {
+    @apply text-text-muted font-medium text-sm;
+  }
+
+  tr:last-child td {
+    @apply border-b-0;
+  }
+}
+
+@layer utilities {
+  .glass {
+    @apply bg-bg-card/70 backdrop-blur-md border border-white/10 shadow-xl;
+  }
+
+  .glass-card {
+    @apply bg-white/5 backdrop-blur-lg border border-white/10 shadow-xl rounded-xl;
+  }
+
+  .text-gradient {
+    @apply bg-clip-text text-transparent bg-gradient-to-r from-primary-light to-primary;
+  }
+
+  /* Custom Scrollbar */
+  ::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+  }
+
+  ::-webkit-scrollbar-track {
+    @apply bg-bg-dark;
+  }
+
+  ::-webkit-scrollbar-thumb {
+    @apply bg-border rounded-full hover:bg-text-muted;
+  }
+}

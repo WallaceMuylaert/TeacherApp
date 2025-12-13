@@ -1,0 +1,57 @@
+from sqlalchemy.orm import Session
+from backend.models.students import Student
+from backend.models.attendance import AttendanceLog
+from backend.models.enrollments import Enrollment
+from backend.schemas.students import StudentCreate
+
+def get_students(db: Session, user_id: int, skip: int = 0, limit: int = 100):
+    return db.query(Student).filter(Student.owner_id == user_id).offset(skip).limit(limit).all()
+
+def create_student(db: Session, student: StudentCreate, user_id: int):
+    db_student = Student(**student.model_dump(), owner_id=user_id)
+    db.add(db_student)
+    db.commit()
+    db.refresh(db_student)
+    return db_student
+
+def update_student(db: Session, student_id: int, name: str):
+    student = db.query(Student).filter(Student.id == student_id).first()
+    if student:
+        student.name = name
+        db.commit()
+        db.refresh(student)
+    return student
+
+def delete_student(db: Session, student_id: int):
+    student = db.query(Student).filter(Student.id == student_id).first()
+    if student:
+        db.query(AttendanceLog).filter(AttendanceLog.student_id == student_id).delete()
+        db.query(Enrollment).filter(Enrollment.student_id == student_id).delete()
+        db.delete(student)
+        db.commit()
+    return student
+
+def get_student_report_stats(db: Session, student_id: int):
+    student = db.query(Student).filter(Student.id == student_id).first()
+    if not student:
+        return None
+    
+    logs = db.query(AttendanceLog).filter(AttendanceLog.student_id == student_id).all()
+    
+    total_sessions = len(logs)
+    present_sessions = len([l for l in logs if l.status == 'present'])
+    attendance_rate = (present_sessions / total_sessions * 100) if total_sessions > 0 else 0
+    
+    avg_grade = 0
+    graded_logs = [l.grade for l in logs if l.grade is not None]
+    if graded_logs:
+        avg_grade = sum(graded_logs) / len(graded_logs)
+        
+    return {
+        "student": student,
+        "total_classes": total_sessions,
+        "present": present_sessions,
+        "attendance_rate": round(attendance_rate, 2),
+        "avg_grade": round(avg_grade, 2),
+        "logs": logs
+    }
