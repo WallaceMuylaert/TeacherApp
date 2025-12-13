@@ -9,3 +9,4 @@ python-dotenv
 pydantic-settings
 pytest
 httpx
+python-docx
