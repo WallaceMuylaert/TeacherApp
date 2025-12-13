@@ -17,8 +17,9 @@ O projeto segue a arquitetura SOLID e está organizado da seguinte forma:
 1.  **Pré-requisitos**:
     - Python 3.13+
     - Virtualenv (recomendado)
+    - Docker & Docker Compose (para produção)
 
-2.  **Instalação**:
+2.  **Instalação Local (Desenvolvimento)**:
     ```bash
     # Crie e ative o ambiente virtual
     python -m venv .venv
@@ -32,10 +33,10 @@ O projeto segue a arquitetura SOLID e está organizado da seguinte forma:
 3.  **Variáveis de Ambiente**:
     Copie o arquivo `.env.example` para `.env` e ajuste conforme necessário:
     ```bash
-    cp backend/.env.example backend/.env
+    cp .env.example .env
     ```
 
-## Executando o Servidor
+## Executando o Servidor (Local)
 
 Para iniciar o servidor de desenvolvimento:
 
@@ -44,6 +45,37 @@ uvicorn backend.server:app --reload --host 0.0.0.0 --port 8000
 ```
 
 A documentação interativa da API estará disponível em: http://localhost:8000/docs
+
+## Deploy com Docker (Produção)
+
+Para rodar a aplicação em um ambiente de produção (VPS) usando Docker:
+
+1.  **Configure o ambiente**:
+    Certifique-se de que o arquivo `.env` está configurado corretamente com as portas desejadas.
+    ```ini
+    PORT_BACKEND=8000
+    PORT_FRONTEND=8080
+    HOST_IP=0.0.0.0
+    ```
+
+2.  **Suba os containers**:
+    ```bash
+    docker compose up -d --build
+    ```
+
+3.  **Acesse a aplicação**:
+    - Frontend: `http://seu-ip:8080` (ou a porta definida em `PORT_FRONTEND`)
+    - Backend API: `http://seu-ip:8000` (ou a porta definida em `PORT_BACKEND`)
+
+4.  **Verifique os logs (opcional)**:
+    ```bash
+    docker compose logs -f
+    ```
+
+5.  **Parar a aplicação**:
+    ```bash
+    docker compose down
+    ```
 
 ## Testes
 

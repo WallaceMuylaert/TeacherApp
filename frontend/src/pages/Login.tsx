@@ -6,7 +6,7 @@ export const Login = () => {
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [error, setError] = useState('');
-    const [isRegistering, setIsRegistering] = useState(false);
+
 
     const { login, user } = useAuth();
     const navigate = useNavigate();

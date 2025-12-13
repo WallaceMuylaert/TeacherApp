@@ -8,7 +8,9 @@ import { Payments } from './pages/Payments';
 import Admin from './pages/Admin';
 import { Layout } from './components/Layout';
 
-const ProtectedRoute = ({ children }: { children: JSX.Element }) => {
+import type { ReactNode } from 'react';
+
+const ProtectedRoute = ({ children }: { children: ReactNode }) => {
   const { user, isLoading } = useAuth();
   if (isLoading) return <div>Loading...</div>;
   if (!user) return <Navigate to="/login" />;

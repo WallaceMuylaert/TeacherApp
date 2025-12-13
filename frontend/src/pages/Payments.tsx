@@ -1,6 +1,6 @@
-import React, { useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import api from '../api';
-import { DollarSign, Filter, CheckCircle, AlertCircle } from 'lucide-react';
+import { DollarSign, CheckCircle, AlertCircle } from 'lucide-react';
 
 interface Student {
     id: number;
@@ -75,7 +75,7 @@ export const Payments = () => {
 
     // Calculate stats
     const totalStudents = students.length;
-    const paidCount = payments.filter(p => p.status === 'PAID').length;
+
     // Note: payments array only contains records that exist. If a student has no record, they are essentially PENDING (or not generated).
     // The previous logic implies creating a record on toggle. So we must count intersections.
     // Actually, visually we should show all students.
@@ -186,8 +186,8 @@ export const Payments = () => {
                                             <button
                                                 onClick={() => handleTogglePayment(student.id, payment?.status || 'PENDING', payment?.id)}
                                                 className={`px-4 py-1.5 rounded-lg text-xs font-bold transition-all ${isPaid
-                                                        ? 'bg-transparent border border-white/20 text-text-muted hover:border-danger hover:text-danger hover:bg-danger/10'
-                                                        : 'bg-success text-white hover:bg-success-hover shadow-lg shadow-success/20'
+                                                    ? 'bg-transparent border border-white/20 text-text-muted hover:border-danger hover:text-danger hover:bg-danger/10'
+                                                    : 'bg-success text-white hover:bg-success-hover shadow-lg shadow-success/20'
                                                     }`}
                                             >
                                                 {isPaid ? 'Desmarcar' : 'Confirmar Pagamento'}

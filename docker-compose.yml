@@ -1,0 +1,29 @@
+services:
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile.backend
+    container_name: teacher_app_backend
+    restart: always
+    volumes:
+      - sqlite_data:/app/db
+    env_file:
+      - .env
+    environment:
+      - DB_PATH=/app/db/student_management.db
+    ports:
+      - "${PORT_BACKEND}:8000"
+
+  frontend:
+    build:
+      context: .
+      dockerfile: Dockerfile.frontend
+    container_name: teacher_app_frontend
+    restart: always
+    depends_on:
+      - backend
+    ports:
+      - "${PORT_FRONTEND}:80"
+
+volumes:
+  sqlite_data:

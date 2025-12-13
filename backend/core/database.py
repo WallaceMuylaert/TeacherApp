@@ -7,7 +7,12 @@ import os
 # Build path relative to this file (backend/core/database.py)
 # We want to go up two levels: backend/core/ -> backend/ -> root/
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-SQLALCHEMY_DATABASE_URL = f"sqlite:///{os.path.join(BASE_DIR, 'student_management.db')}"
+
+db_path = os.getenv("DB_PATH")
+if not db_path:
+    db_path = os.path.join(BASE_DIR, "student_management.db")
+
+SQLALCHEMY_DATABASE_URL = f"sqlite:///{db_path}"
 
 engine = create_engine(
     SQLALCHEMY_DATABASE_URL, connect_args={"check_same_thread": False}

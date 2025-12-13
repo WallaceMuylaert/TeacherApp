@@ -1,0 +1,20 @@
+# Backend Dockerfile
+FROM python:3.13-slim
+
+WORKDIR /app
+
+# Install system dependencies if needed (e.g. for some python packages)
+# RUN apt-get update && apt-get install -y gcc
+
+COPY requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt
+
+COPY backend/ backend/
+# Create directory for db
+RUN mkdir -p /app/db
+
+# Expose internal port
+EXPOSE 8000
+
+# Run production server
+CMD ["uvicorn", "backend.server:app", "--host", "0.0.0.0", "--port", "8000"]

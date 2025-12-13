@@ -1,0 +1,11 @@
+__pycache__
+*.py[cod]
+*$py.class
+.venv
+.git
+.gitignore
+*.db
+node_modules
+dist
+.env
+.DS_Store
