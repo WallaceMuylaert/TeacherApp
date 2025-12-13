@@ -64,3 +64,10 @@ def get_student_report_stats(db: Session, student_id: int):
         "avg_grade": round(avg_grade, 2),
         "logs": logs
     }
+
+def get_student_evolution(db: Session, student_id: int):
+    # Retrieve logs ordered by session date
+    # Need to import AttendanceSession first (check top of file)
+    from backend.models.attendance import AttendanceSession
+    results = db.query(AttendanceLog).join(AttendanceSession).filter(AttendanceLog.student_id == student_id).order_by(AttendanceSession.date).all()
+    return results

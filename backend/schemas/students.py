@@ -1,5 +1,6 @@
 from pydantic import BaseModel
-from typing import Optional
+from typing import Optional, List
+import datetime
 
 class StudentBase(BaseModel):
     name: str
@@ -16,3 +17,8 @@ class Student(StudentBase):
     owner_id: int
     class Config:
         from_attributes = True
+
+class StudentEvolutionPoint(BaseModel):
+    date: datetime.date
+    grade: Optional[float] = None
+    status: str

@@ -44,6 +44,19 @@ def delete_student(student_id: int, db: Session = Depends(database.get_db), curr
         raise HTTPException(status_code=404, detail="Student not found")
     return {"detail": "Student deleted"}
 
+@router.get("/students/{student_id}/evolution", response_model=List[student_schemas.StudentEvolutionPoint])
+def get_student_evolution(student_id: int, db: Session = Depends(database.get_db), current_user: user_schemas.User = Depends(security.get_current_user)):
+    results = student_crud.get_student_evolution(db, student_id=student_id)
+    
+    response = []
+    for log in results:
+        response.append({
+            "date": log.session.date,
+            "grade": log.grade,
+            "status": log.status
+        })
+    return response
+
 @router.get("/students/{student_id}/report/docx")
 def generate_student_report(student_id: int, db: Session = Depends(database.get_db), current_user: user_schemas.User = Depends(security.get_current_user)):
     stats = student_crud.get_student_report_stats(db, student_id=student_id)

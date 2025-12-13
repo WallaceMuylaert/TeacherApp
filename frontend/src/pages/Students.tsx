@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import api from '../api';
-import { Plus, Search, Pencil, Trash, X, AlertTriangle, UserCircle } from 'lucide-react';
+import { Plus, Search, Pencil, Trash, X, AlertTriangle, UserCircle, LineChart as LineChartIcon } from 'lucide-react';
+import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 
 interface Student {
     id: number;
@@ -9,6 +10,12 @@ interface Student {
     parent_name?: string;
     parent_phone?: string;
     parent_email?: string;
+}
+
+interface EvolutionPoint {
+    date: string;
+    grade: number | null;
+    status: string;
 }
 
 interface ClassModel {
@@ -34,6 +41,11 @@ export const Students = () => {
     const [editStudentData, setEditStudentData] = useState({ name: '', phone: '', parent_name: '', parent_phone: '', parent_email: '' });
 
     const [deletingStudent, setDeletingStudent] = useState<Student | null>(null);
+
+    // Evolution Modal State
+    const [viewingEvolution, setViewingEvolution] = useState<Student | null>(null);
+    const [evolutionData, setEvolutionData] = useState<EvolutionPoint[]>([]);
+
 
     useEffect(() => {
         fetchClasses();
@@ -99,6 +111,17 @@ export const Students = () => {
         } catch (e) { alert('Erro ao excluir'); }
     };
 
+    const handleViewEvolution = async (student: Student) => {
+        setViewingEvolution(student);
+        setEvolutionData([]);
+        try {
+            const res = await api.get(`/students/${student.id}/evolution`);
+            // Parse dates if necessary, recharts handles strings usually but better ensure
+            setEvolutionData(res.data);
+        } catch (e) { console.error(e); alert('Erro ao buscar evolução'); }
+    };
+
+
     return (
         <div className="animate-fade-in">
             <div className="flex justify-between items-center mb-8">
@@ -155,6 +178,13 @@ export const Students = () => {
                                     </td>
                                     <td className="p-4 text-right">
                                         <div className="flex justify-end gap-2">
+                                            <button
+                                                onClick={() => handleViewEvolution(student)}
+                                                className="p-2 hover:bg-white/10 text-text-muted hover:text-primary rounded-lg transition-colors"
+                                                title="Ver Evolução"
+                                            >
+                                                <LineChartIcon size={18} />
+                                            </button>
                                             <button
                                                 onClick={() => {
                                                     setEditingStudent(student);
@@ -304,6 +334,37 @@ export const Students = () => {
                                 <button type="submit" className="bg-primary hover:bg-primary-hover text-white px-6 py-2 rounded-lg">Salvar</button>
                             </div>
                         </form>
+                    </div>
+                </div>
+            )}
+
+            {/* Evolution Modal */}
+            {viewingEvolution && (
+                <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4 animate-fade-in">
+                    <div className="glass-card w-full max-w-4xl p-8 animate-slide-up relative">
+                        <button onClick={() => setViewingEvolution(null)} className="absolute top-4 right-4 text-text-muted hover:text-white"><X size={20} /></button>
+                        <h3 className="text-2xl font-bold text-white mb-6">Evolução: {viewingEvolution.name}</h3>
+
+                        <div className="h-[400px] w-full">
+                            {evolutionData.length > 0 ? (
+                                <ResponsiveContainer width="100%" height="100%">
+                                    <LineChart data={evolutionData}>
+                                        <CartesianGrid strokeDasharray="3 3" stroke="#ffffff20" />
+                                        <XAxis dataKey="date" stroke="#9ca3af" />
+                                        <YAxis stroke="#9ca3af" domain={[0, 10]} />
+                                        <Tooltip
+                                            contentStyle={{ backgroundColor: '#1f2937', borderColor: '#374151', color: '#fff' }}
+                                            itemStyle={{ color: '#fff' }}
+                                        />
+                                        <Line type="monotone" dataKey="grade" stroke="#8b5cf6" strokeWidth={3} dot={{ r: 4, fill: '#8b5cf6' }} activeDot={{ r: 8 }} />
+                                    </LineChart>
+                                </ResponsiveContainer>
+                            ) : (
+                                <div className="flex items-center justify-center h-full text-text-muted">
+                                    Nenhum dado de evolução encontrado.
+                                </div>
+                            )}
+                        </div>
                     </div>
                 </div>
             )}

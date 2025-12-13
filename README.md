@@ -12,6 +12,25 @@ O projeto segue a arquitetura SOLID e está organizado da seguinte forma:
 - **crud/**: Operações de banco de dados (Create, Read, Update, Delete).
 - **routers/**: Rotas da API (Endpoints).
 
+## 🚀 Como Inicializar (Rápido)
+
+Para rodar o projeto rapidamente usando **Docker**:
+
+1.  **Configure as variáveis**:
+    ```bash
+    cp .env.example .env
+    ```
+
+2.  **Inicie os containers**:
+    ```bash
+    docker compose up -d --build
+    ```
+
+3.  **Acesse a aplicação**:
+    - **Frontend**: http://localhost:8080 (ou porta definida no .env)
+    - **Backend API**: http://localhost:8000/docs
+
+
 ## Configuração
 
 1.  **Pré-requisitos**:
