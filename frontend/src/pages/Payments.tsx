@@ -107,6 +107,23 @@ export const Payments = () => {
     // Note: To restore accurate stats, we might need a separate call.
     // For now, let's assume visual correctness of the list is priority.
 
+    const handleExportReport = async () => {
+        try {
+            const res = await api.post(`/payments/report/docx?month=${selectedMonth}&year=${selectedYear}`, {}, {
+                responseType: 'blob'
+            });
+            const url = window.URL.createObjectURL(new Blob([res.data]));
+            const link = document.createElement('a');
+            link.href = url;
+            link.setAttribute('download', `Financeiro_${selectedMonth}_${selectedYear}.docx`);
+            document.body.appendChild(link);
+            link.click();
+            link.remove();
+        } catch (e) {
+            showToast('Erro ao gerar relatório', 'error');
+        }
+    };
+
     return (
         <div className="animate-fade-in relative">
             {toast && (
@@ -125,6 +142,12 @@ export const Payments = () => {
 
                 {/* Filters */}
                 <div className="flex gap-2 bg-bg-card p-2 rounded-xl border border-white/5">
+                    <button
+                        onClick={handleExportReport}
+                        className="bg-primary hover:bg-primary-hover text-white px-4 py-2 rounded-lg text-sm font-bold transition-colors shadow-lg shadow-primary/20 flex items-center gap-2"
+                    >
+                        <DollarSign size={16} /> Exportar Relatório
+                    </button>
                     <select value={selectedMonth} onChange={e => setSelectedMonth(Number(e.target.value))} className="bg-bg-dark border border-white/10 rounded-lg px-3 py-2 text-white focus:outline-none focus:ring-1 focus:ring-primary">
                         {Array.from({ length: 12 }, (_, i) => i + 1).map(m => (
                             <option key={m} value={m}>{new Date(0, m - 1).toLocaleString('pt-BR', { month: 'long' })}</option>
