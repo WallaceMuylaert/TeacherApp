@@ -152,7 +152,17 @@ def generate_student_report(
         row_cells[1].text = str(log.session.description)
         
         # Translate status
-        status_map = {'PRESENT': 'Presente', 'ABSENT': 'Ausente', 'LATE': 'Atrasado', 'Justified': 'Justificado'}
+        # Translate status
+        status_map = {
+            'PRESENT': 'Presente', 
+            'ABSENT': 'Ausente', 
+            'LATE': 'Atrasado', 
+            'Justified': 'Justificado',
+            'present': 'Presente',
+            'absent': 'Ausente',
+            'late': 'Atrasado',
+            'justified': 'Justificado'
+        }
         row_cells[2].text = status_map.get(log.status, log.status)
         
         row_cells[3].text = str(log.grade) if log.grade is not None else '-'

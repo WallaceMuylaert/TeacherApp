@@ -22,6 +22,7 @@ interface Payment {
 export const Payments = () => {
     const [students, setStudents] = useState<Student[]>([]);
     const [payments, setPayments] = useState<Payment[]>([]);
+    const [allStudentIds, setAllStudentIds] = useState<number[]>([]); // For stats
     const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth() + 1);
     const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
     const [loading, setLoading] = useState(true);
@@ -46,24 +47,32 @@ export const Payments = () => {
         setLoading(true);
         try {
             const skip = page * limit;
-            // Fetch students (paginated + search)
+
+            // 1. Fetch paginated students for the table
             const studentsRes = await api.get(`/students/?skip=${skip}&limit=${limit}&search=${search}`);
 
-            // For the payments, we fetch ALL payments for the month to match status. 
-            // Optimization: could filter by student IDs if backend supported `student_ids` array param.
-            const paymentsRes = await api.get(`/payments/?year=${selectedYear}&month=${selectedMonth}`);
+            // 2. Fetch ALL students for accurate Stats (Total & Pending)
+            // We use a high limit to ensure we get everyone to count correctly.
+            const allStudentsRes = await api.get(`/students/?limit=1000`);
+
+            // 3. Fetch ALL payments for the month (limit 1000)
+            const paymentsRes = await api.get(`/payments/?year=${selectedYear}&month=${selectedMonth}&limit=1000`);
 
             setStudents(studentsRes.data);
+            setAllStudentIds(allStudentsRes.data.map((s: Student) => s.id));
             setPayments(paymentsRes.data);
         } catch (e) { console.error(e); }
         finally { setLoading(false); }
     };
 
-    // Calculate stats (based on current page)
-    const totalStudents = students.length;
-    // Better Paid Count: match student IDs
-    const paidStudentIds = payments.filter(p => p.status === 'PAID').map(p => p.student_id);
-    const actualPaidCount = students.filter(s => paidStudentIds.includes(s.id)).length;
+    // Calculate stats (based on ALL students, not just current page)
+    const totalStudents = allStudentIds.length;
+
+    // Paid Count: Payment is PAID AND belongs to a valid student
+    const actualPaidCount = payments.filter(p =>
+        p.status === 'PAID' && allStudentIds.includes(p.student_id)
+    ).length;
+
     const pendingCount = totalStudents - actualPaidCount;
 
 
