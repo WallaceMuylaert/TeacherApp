@@ -578,7 +578,7 @@ export const ClassDetails = () => {
                                         <tr className="bg-black/20">
                                             <th className="text-left p-4 text-xs font-bold text-text-muted uppercase tracking-wider min-w-[200px]">Aluno</th>
                                             <th className="text-left p-4 text-xs font-bold text-text-muted uppercase tracking-wider w-[150px]">Status</th>
-                                            <th className="text-center p-4 text-xs font-bold text-text-muted uppercase tracking-wider w-[150px]">Redação Entregue?</th>
+                                            <th className="text-center p-4 text-xs font-bold text-text-muted uppercase tracking-wider w-[150px]">Trabalho Entregue?</th>
                                             <th className="text-left p-4 text-xs font-bold text-text-muted uppercase tracking-wider w-[120px]">Nota</th>
                                             <th className="text-left p-4 text-xs font-bold text-text-muted uppercase tracking-wider min-w-[250px]">Obs</th>
                                         </tr>
