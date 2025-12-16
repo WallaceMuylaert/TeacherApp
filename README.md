@@ -12,94 +12,167 @@ O projeto segue a arquitetura SOLID e está organizado da seguinte forma:
 - **crud/**: Operações de banco de dados (Create, Read, Update, Delete).
 - **routers/**: Rotas da API (Endpoints).
 
-## 🚀 Como Inicializar (Rápido)
+---
 
-Para rodar o projeto rapidamente usando **Docker**:
+## 🚀 Quick Start
 
-1.  **Configure as variáveis**:
-    ```bash
-    cp .env.example .env
-    ```
+### 1. Configure as variáveis de ambiente
+```bash
+cp .env.example .env
+```
 
-2.  **Inicie os containers**:
-    ```bash
-    docker compose up -d --build
-    ```
+### 2. Escolha o ambiente
 
-3.  **Acesse a aplicação**:
-    - **Frontend**: http://localhost:8080 (ou porta definida no .env)
-    - **Backend API**: http://localhost:8000/docs
+| Ambiente | Comando |
+|----------|---------|
+| **Desenvolvimento** | `docker compose -f docker-compose.dev.yml up -d` |
+| **Produção** | `docker compose -f docker-compose.prod.yml up -d` |
 
+---
 
-## Configuração
+## 🛠️ Ambiente de Desenvolvimento (Hot Reload)
 
-1.  **Pré-requisitos**:
-    - Python 3.13+
-    - Virtualenv (recomendado)
-    - Docker & Docker Compose (para produção)
+O ambiente de desenvolvimento possui **hot reload** habilitado, ou seja, qualquer alteração no código é refletida automaticamente sem precisar reconstruir os containers.
 
-2.  **Instalação Local (Desenvolvimento)**:
-    ```bash
-    # Crie e ative o ambiente virtual
-    python -m venv .venv
-    source .venv/bin/activate  # Linux/Mac
-    # .venv\Scripts\activate  # Windows
+### Arquivos utilizados:
+- `docker-compose.dev.yml`
+- `Dockerfile.backend.dev`
+- `Dockerfile.frontend.dev`
 
-    # Instale as dependências
-    pip install -r requirements.txt
-    ```
-
-3.  **Variáveis de Ambiente**:
-    Copie o arquivo `.env.example` para `.env` e ajuste conforme necessário:
-    ```bash
-    cp .env.example .env
-    ```
-
-## Executando o Servidor (Local)
-
-Para iniciar o servidor de desenvolvimento:
+### Comandos:
 
 ```bash
+# Subir os containers (primeira vez ou após alterar dependências)
+docker compose -f docker-compose.dev.yml up -d --build
+
+# Subir os containers (uso normal)
+docker compose -f docker-compose.dev.yml up -d
+
+# Ver logs em tempo real
+docker compose -f docker-compose.dev.yml logs -f
+
+# Ver logs do backend
+docker logs teacher_app_backend_dev -f
+
+# Ver logs do frontend
+docker logs teacher_app_frontend_dev -f
+
+# Parar os containers
+docker compose -f docker-compose.dev.yml down
+```
+
+### Características:
+- ✅ **Backend**: Uvicorn com `--reload` (reinicia automaticamente ao alterar arquivos Python)
+- ✅ **Frontend**: Vite dev server com HMR (Hot Module Replacement)
+- ✅ **Volumes montados**: Código fonte é montado diretamente nos containers
+- ⚠️ **Não otimizado para produção**
+
+---
+
+## 🏭 Ambiente de Produção
+
+O ambiente de produção é otimizado para performance e estabilidade.
+
+### Arquivos utilizados:
+- `docker-compose.prod.yml`
+- `Dockerfile.backend`
+- `Dockerfile.frontend`
+
+### Comandos:
+
+```bash
+# Subir os containers (com build)
+docker compose -f docker-compose.prod.yml up -d --build
+
+# Subir os containers
+docker compose -f docker-compose.prod.yml up -d
+
+# Ver logs
+docker compose -f docker-compose.prod.yml logs -f
+
+# Parar os containers
+docker compose -f docker-compose.prod.yml down
+
+# Reconstruir após alterações no código
+docker compose -f docker-compose.prod.yml up -d --build
+```
+
+### Características:
+- ✅ **Backend**: Uvicorn sem reload (mais performático)
+- ✅ **Frontend**: Build estático servido via Nginx
+- ✅ **Restart automático**: Containers reiniciam automaticamente se falharem
+- ✅ **Otimizado para produção**
+
+---
+
+## 📋 Resumo de Comandos
+
+| Ação | Desenvolvimento | Produção |
+|------|-----------------|----------|
+| **Subir** | `docker compose -f docker-compose.dev.yml up -d` | `docker compose -f docker-compose.prod.yml up -d` |
+| **Parar** | `docker compose -f docker-compose.dev.yml down` | `docker compose -f docker-compose.prod.yml down` |
+| **Rebuild** | `docker compose -f docker-compose.dev.yml up -d --build` | `docker compose -f docker-compose.prod.yml up -d --build` |
+| **Logs** | `docker compose -f docker-compose.dev.yml logs -f` | `docker compose -f docker-compose.prod.yml logs -f` |
+
+---
+
+## ⚙️ Configuração
+
+### Pré-requisitos
+- Python 3.13+
+- Docker & Docker Compose
+- Node.js 20+ (se rodar localmente)
+
+### Variáveis de Ambiente (.env)
+
+```ini
+# Portas
+PORT_BACKEND=8001
+PORT_FRONTEND=8002
+
+# Segurança
+SECRET_KEY=sua-chave-secreta-aqui
+```
+
+---
+
+## 💻 Desenvolvimento Local (Sem Docker)
+
+Se preferir rodar sem Docker:
+
+### Backend
+```bash
+# Crie e ative o ambiente virtual
+python -m venv .venv
+source .venv/bin/activate  # Linux/Mac
+# .venv\Scripts\activate  # Windows
+
+# Instale as dependências
+pip install -r requirements.txt
+
+# Rode o servidor
 uvicorn backend.server:app --reload --host 0.0.0.0 --port 8000
 ```
 
-A documentação interativa da API estará disponível em: http://localhost:8000/docs
+### Frontend
+```bash
+cd frontend
+npm install
+npm run dev
+```
 
-## Deploy com Docker (Produção)
+---
 
-Para rodar a aplicação em um ambiente de produção (VPS) usando Docker:
-
-1.  **Configure o ambiente**:
-    Certifique-se de que o arquivo `.env` está configurado corretamente com as portas desejadas.
-    ```ini
-    PORT_BACKEND=8000
-    PORT_FRONTEND=8080
-    HOST_IP=0.0.0.0
-    ```
-
-2.  **Suba os containers**:
-    ```bash
-    docker compose up -d --build
-    ```
-
-3.  **Acesse a aplicação**:
-    - Frontend: `http://seu-ip:8080` (ou a porta definida em `PORT_FRONTEND`)
-    - Backend API: `http://seu-ip:8000` (ou a porta definida em `PORT_BACKEND`)
-
-4.  **Verifique os logs (opcional)**:
-    ```bash
-    docker compose logs -f
-    ```
-
-5.  **Parar a aplicação**:
-    ```bash
-    docker compose down
-    ```
-
-## Testes
-
-Para rodar os testes:
+## 🧪 Testes
 
 ```bash
 pytest
 ```
+
+---
+
+## 📖 Documentação da API
+
+Após iniciar o backend, acesse:
+- **Swagger UI**: http://localhost:8001/docs
+- **ReDoc**: http://localhost:8001/redoc
