@@ -560,7 +560,7 @@ export const ClassDetails = () => {
                 )}
 
                 {activeTab === 'attendance' && (
-                    <div className="glass-card">
+                    <div className="glass-card p-4">
                         <div className="flex justify-between items-center mb-6 border-b border-white/5 pb-4">
                             <h2 className="text-xl font-bold flex items-center gap-2 text-white">
                                 <span className="w-2 h-8 bg-primary rounded-full"></span> Nova Chamada
