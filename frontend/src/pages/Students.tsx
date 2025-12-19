@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import api from '../api';
 import { Plus, Search, Pencil, Trash, X, AlertTriangle, UserCircle, LineChart as LineChartIcon, Download } from 'lucide-react';
 import html2canvas from 'html2canvas';
+import { formatPhone } from '../utils/masks';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import { Loading } from '../components/Loading';
 
@@ -330,7 +331,10 @@ export const Students = () => {
                             <div>
                                 <label className="text-xs font-medium text-text-muted uppercase tracking-wider ml-1">Celular</label>
                                 <input className="w-full p-3 bg-bg-dark/50 border border-border rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-primary"
-                                    value={newStudentData.phone} onChange={e => setNewStudentData({ ...newStudentData, phone: e.target.value })} placeholder="(99) 99999-9999" />
+                                    value={newStudentData.phone}
+                                    onChange={e => setNewStudentData({ ...newStudentData, phone: formatPhone(e.target.value) })}
+                                    maxLength={15}
+                                    placeholder="(99) 99999-9999" />
                             </div>
                             <div className="grid grid-cols-2 gap-4">
                                 <div>
@@ -339,14 +343,17 @@ export const Students = () => {
                                         value={newStudentData.parent_name} onChange={e => setNewStudentData({ ...newStudentData, parent_name: e.target.value })} />
                                 </div>
                                 <div>
-                                    <label className="text-xs font-medium text-text-muted uppercase tracking-wider ml-1">Tel. Responsável</label>
+                                    <label className="text-xs font-medium text-text-muted uppercase tracking-wider ml-1">Cel. Responsável</label>
                                     <input className="w-full p-3 bg-bg-dark/50 border border-border rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-primary"
-                                        value={newStudentData.parent_phone} onChange={e => setNewStudentData({ ...newStudentData, parent_phone: e.target.value })} />
+                                        value={newStudentData.parent_phone}
+                                        onChange={e => setNewStudentData({ ...newStudentData, parent_phone: formatPhone(e.target.value) })}
+                                        maxLength={15}
+                                        placeholder="(99) 99999-9999" />
                                 </div>
                             </div>
                             <div>
                                 <label className="text-xs font-medium text-text-muted uppercase tracking-wider ml-1">Email Responsável</label>
-                                <input className="w-full p-3 bg-bg-dark/50 border border-border rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-primary"
+                                <input type="email" className="w-full p-3 bg-bg-dark/50 border border-border rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-primary"
                                     value={newStudentData.parent_email} onChange={e => setNewStudentData({ ...newStudentData, parent_email: e.target.value })} />
                             </div>
 
@@ -386,7 +393,10 @@ export const Students = () => {
                             <div>
                                 <label className="text-xs font-medium text-text-muted uppercase tracking-wider ml-1">Celular</label>
                                 <input className="w-full p-3 bg-bg-dark/50 border border-border rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-primary"
-                                    value={editStudentData.phone} onChange={e => setEditStudentData({ ...editStudentData, phone: e.target.value })} />
+                                    value={editStudentData.phone}
+                                    onChange={e => setEditStudentData({ ...editStudentData, phone: formatPhone(e.target.value) })}
+                                    maxLength={15}
+                                    placeholder="(99) 99999-9999" />
                             </div>
                             <div className="grid grid-cols-2 gap-4">
                                 <div>
@@ -395,14 +405,17 @@ export const Students = () => {
                                         value={editStudentData.parent_name} onChange={e => setEditStudentData({ ...editStudentData, parent_name: e.target.value })} />
                                 </div>
                                 <div>
-                                    <label className="text-xs font-medium text-text-muted uppercase tracking-wider ml-1">Tel. Responsável</label>
+                                    <label className="text-xs font-medium text-text-muted uppercase tracking-wider ml-1">Cel. Responsável</label>
                                     <input className="w-full p-3 bg-bg-dark/50 border border-border rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-primary"
-                                        value={editStudentData.parent_phone} onChange={e => setEditStudentData({ ...editStudentData, parent_phone: e.target.value })} />
+                                        value={editStudentData.parent_phone}
+                                        onChange={e => setEditStudentData({ ...editStudentData, parent_phone: formatPhone(e.target.value) })}
+                                        maxLength={15}
+                                        placeholder="(99) 99999-9999" />
                                 </div>
                             </div>
                             <div>
                                 <label className="text-xs font-medium text-text-muted uppercase tracking-wider ml-1">Email Responsável</label>
-                                <input className="w-full p-3 bg-bg-dark/50 border border-border rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-primary"
+                                <input type="email" className="w-full p-3 bg-bg-dark/50 border border-border rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-primary"
                                     value={editStudentData.parent_email} onChange={e => setEditStudentData({ ...editStudentData, parent_email: e.target.value })} />
                             </div>
                             <div className="flex justify-end gap-3 mt-6">
