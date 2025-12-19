@@ -40,12 +40,20 @@ def delete_student(db: Session, student_id: int):
         db.commit()
     return student
 
-def get_student_report_stats(db: Session, student_id: int):
+def get_student_report_stats(db: Session, student_id: int, month: int = None, year: int = None):
     student = db.query(Student).filter(Student.id == student_id).first()
     if not student:
         return None
     
-    logs = db.query(AttendanceLog).filter(AttendanceLog.student_id == student_id).all()
+    from backend.models.attendance import AttendanceSession
+    query = db.query(AttendanceLog).join(AttendanceSession).filter(AttendanceLog.student_id == student_id)
+
+    if month and year:
+        from sqlalchemy import extract
+        query = query.filter(extract('month', AttendanceSession.date) == month)
+        query = query.filter(extract('year', AttendanceSession.date) == year)
+
+    logs = query.order_by(AttendanceSession.date).all()
     
     total_sessions = len(logs)
     present_sessions = len([l for l in logs if l.status == 'present'])

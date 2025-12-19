@@ -47,6 +47,8 @@ export const Students = () => {
     // Evolution Modal State
     const [viewingEvolution, setViewingEvolution] = useState<Student | null>(null);
     const [evolutionData, setEvolutionData] = useState<EvolutionPoint[]>([]);
+    const [reportMonth, setReportMonth] = useState<number | ''>(''); // '' = Todos
+    const [reportYear, setReportYear] = useState<number>(new Date().getFullYear());
 
 
     useEffect(() => {
@@ -130,18 +132,33 @@ export const Students = () => {
         }
 
         try {
-            // Updated to use POST and send chart image
-            const response = await api.post(`/students/${viewingEvolution.id}/report/docx`, {
+            let requestUrl = `/students/${viewingEvolution.id}/report/docx`;
+
+            if (reportMonth !== '') {
+                requestUrl += `?month=${reportMonth}&year=${reportYear}`;
+            }
+
+            const response = await api.post(requestUrl, {
                 chart_image: chartImage
             }, {
                 responseType: 'blob'
             });
 
+            // Construction of filename
+            let datePart = '';
+            if (reportMonth !== '') {
+                datePart = `_${reportMonth.toString().padStart(2, '0')}_${reportYear}`;
+            } else {
+                datePart = `_${reportYear}`;
+            }
+            const safeName = viewingEvolution.name.replace(/\s+/g, '_');
+            const filename = `Relatorio_${safeName}${datePart}.docx`;
+
             // Create download link
-            const url = window.URL.createObjectURL(new Blob([response.data]));
+            const downloadUrl = window.URL.createObjectURL(new Blob([response.data]));
             const link = document.createElement('a');
-            link.href = url;
-            link.setAttribute('download', `Relatorio_${viewingEvolution.name.replace(/\s+/g, '_')}.docx`);
+            link.href = downloadUrl;
+            link.setAttribute('download', filename);
             document.body.appendChild(link);
             link.click();
             link.remove();
@@ -154,12 +171,26 @@ export const Students = () => {
     const handleViewEvolution = async (student: Student) => {
         setViewingEvolution(student);
         setEvolutionData([]);
+        setReportMonth(''); // Default to All
+        setReportYear(new Date().getFullYear());
         try {
             const res = await api.get(`/students/${student.id}/evolution`);
             // Parse dates if necessary, recharts handles strings usually but better ensure
             setEvolutionData(res.data);
         } catch (e) { console.error(e); alert('Erro ao buscar evolução'); }
     };
+
+    // Filter data for chart
+    const getFilteredEvolutionData = () => {
+        if (reportMonth === '') return evolutionData;
+        return evolutionData.filter(d => {
+            const date = new Date(d.date);
+            // Javascript months are 0-indexed
+            return date.getMonth() + 1 === Number(reportMonth) && date.getFullYear() === Number(reportYear);
+        });
+    };
+
+    const filteredEvolutionData = getFilteredEvolutionData();
 
 
     return (
@@ -391,19 +422,41 @@ export const Students = () => {
 
                         <div className="flex justify-between items-center mb-6">
                             <h3 className="text-2xl font-bold text-white">Evolução: {viewingEvolution.name}</h3>
-                            <button
-                                onClick={handleDownloadReport}
-                                className="flex items-center gap-2 px-4 py-2 bg-success/20 text-success hover:bg-success hover:text-white rounded-lg transition-colors font-medium text-sm"
-                            >
-                                <Download size={18} />
-                                Baixar Relatório
-                            </button>
+                            <div className="flex gap-2">
+                                <select
+                                    value={reportMonth}
+                                    onChange={e => setReportMonth(e.target.value === '' ? '' : Number(e.target.value))}
+                                    className="bg-bg-dark border border-white/10 rounded-lg px-3 py-1 text-white text-sm"
+                                >
+                                    <option value="">Todos os Meses</option>
+                                    {Array.from({ length: 12 }, (_, i) => i + 1).map(m => (
+                                        <option key={m} value={m}>{new Date(0, m - 1).toLocaleString('pt-BR', { month: 'long' })}</option>
+                                    ))}
+                                </select>
+                                <select
+                                    value={reportYear}
+                                    onChange={e => setReportYear(Number(e.target.value))}
+                                    className="bg-bg-dark border border-white/10 rounded-lg px-3 py-1 text-white text-sm"
+                                    disabled={reportMonth === ''}
+                                >
+                                    {Array.from({ length: 10 }, (_, i) => new Date().getFullYear() - 5 + i).map(y => (
+                                        <option key={y} value={y}>{y}</option>
+                                    ))}
+                                </select>
+                                <button
+                                    onClick={handleDownloadReport}
+                                    className="flex items-center gap-2 px-4 py-2 bg-success/20 text-success hover:bg-success hover:text-white rounded-lg transition-colors font-medium text-sm"
+                                >
+                                    <Download size={18} />
+                                    Baixar Relatório
+                                </button>
+                            </div>
                         </div>
 
                         <div id="evolution-chart-container" className="h-[400px] w-full bg-bg-card p-4 rounded-xl">
-                            {evolutionData.length > 0 ? (
+                            {filteredEvolutionData.length > 0 ? (
                                 <ResponsiveContainer width="100%" height="100%">
-                                    <LineChart data={evolutionData}>
+                                    <LineChart data={filteredEvolutionData}>
                                         <CartesianGrid strokeDasharray="3 3" stroke="#ffffff20" />
                                         <XAxis dataKey="date" stroke="#9ca3af" />
                                         <YAxis stroke="#9ca3af" domain={[0, 10]} />
