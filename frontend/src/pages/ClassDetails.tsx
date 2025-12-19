@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import api from '../api';
 import { Plus, Save, Calendar, UserPlus, Users, X, FileText, Pencil, Trash2, AlertTriangle, Eye, Download } from 'lucide-react';
-import { formatPhone } from '../utils/masks';
+import { formatPhone, unmaskPhone } from '../utils/masks';
 import { Loading } from '../components/Loading';
 
 interface Student {
@@ -214,7 +214,12 @@ export const ClassDetails = () => {
         setCreatingStudent(true);
 
         try {
-            const res = await api.post('/students/', newStudentData);
+            const payload = {
+                ...newStudentData,
+                phone: unmaskPhone(newStudentData.phone),
+                parent_phone: unmaskPhone(newStudentData.parent_phone)
+            };
+            const res = await api.post('/students/', payload);
             await handleEnrollStudent(res.data.id);
             setNewStudentData({ name: '', phone: '', parent_name: '', parent_phone: '', parent_email: '' });
             setShowCreateStudentModal(false);
@@ -226,7 +231,12 @@ export const ClassDetails = () => {
         e.preventDefault();
         if (!editingStudent || !editStudentData.name.trim()) return;
         try {
-            await api.put(`/students/${editingStudent.id}`, editStudentData);
+            const payload = {
+                ...editStudentData,
+                phone: unmaskPhone(editStudentData.phone),
+                parent_phone: unmaskPhone(editStudentData.parent_phone)
+            };
+            await api.put(`/students/${editingStudent.id}`, payload);
             setEditingStudent(null);
             fetchStudents();
         } catch (e) { alert('Erro ao atualizar aluno'); }

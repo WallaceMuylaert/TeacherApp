@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import api from '../api';
 import { Plus, Search, Pencil, Trash, X, AlertTriangle, UserCircle, LineChart as LineChartIcon, Download } from 'lucide-react';
 import html2canvas from 'html2canvas';
-import { formatPhone } from '../utils/masks';
+import { formatPhone, unmaskPhone } from '../utils/masks';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import { Loading } from '../components/Loading';
 
@@ -84,7 +84,12 @@ export const Students = () => {
     const handleCreateStudent = async (e: React.FormEvent) => {
         e.preventDefault();
         try {
-            const res = await api.post('/students/', newStudentData);
+            const payload = {
+                ...newStudentData,
+                phone: unmaskPhone(newStudentData.phone),
+                parent_phone: unmaskPhone(newStudentData.parent_phone)
+            };
+            const res = await api.post('/students/', payload);
             if (selectedClassId) {
                 await api.post(`/classes/${selectedClassId}/enroll/${res.data.id}`);
             }
@@ -99,7 +104,12 @@ export const Students = () => {
         e.preventDefault();
         if (!editingStudent) return;
         try {
-            await api.put(`/students/${editingStudent.id}`, editStudentData);
+            const payload = {
+                ...editStudentData,
+                phone: unmaskPhone(editStudentData.phone),
+                parent_phone: unmaskPhone(editStudentData.parent_phone)
+            };
+            await api.put(`/students/${editingStudent.id}`, payload);
             setEditingStudent(null);
             fetchData();
         } catch (e) { alert('Erro ao atualizar aluno'); }
