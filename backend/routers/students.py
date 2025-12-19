@@ -26,13 +26,10 @@ def read_students(
 def create_student(student: student_schemas.StudentCreate, db: Session = Depends(database.get_db), current_user: user_schemas.User = Depends(security.get_current_user)):
     return student_crud.create_student(db=db, student=student, user_id=current_user.id)
 
-class StudentUpdate(pydantic.BaseModel):
-    name: str
-
-@router.put("/students/{student_id}")
-def update_student(student_id: int, student_data: StudentUpdate, db: Session = Depends(database.get_db), current_user: user_schemas.User = Depends(security.get_current_user)):
+@router.put("/students/{student_id}", response_model=student_schemas.Student)
+def update_student(student_id: int, student_data: student_schemas.StudentCreate, db: Session = Depends(database.get_db), current_user: user_schemas.User = Depends(security.get_current_user)):
     # Verify ownership logic could be added here (check student -> owner_id)
-    student = student_crud.update_student(db, student_id=student_id, name=student_data.name)
+    student = student_crud.update_student(db, student_id=student_id, student_data=student_data)
     if not student:
         raise HTTPException(status_code=404, detail="Student not found")
     return student

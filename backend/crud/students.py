@@ -23,10 +23,14 @@ def create_student(db: Session, student: StudentCreate, user_id: int):
     db.refresh(db_student)
     return db_student
 
-def update_student(db: Session, student_id: int, name: str):
+def update_student(db: Session, student_id: int, student_data: StudentCreate):
     student = db.query(Student).filter(Student.id == student_id).first()
     if student:
-        student.name = name
+        student.name = student_data.name
+        student.phone = student_data.phone
+        student.parent_name = student_data.parent_name
+        student.parent_phone = student_data.parent_phone
+        student.parent_email = student_data.parent_email
         db.commit()
         db.refresh(student)
     return student
