@@ -240,9 +240,12 @@ export const ClassDetails = () => {
         } catch (e) { alert('Erro ao excluir aluno'); }
     };
 
-    const downloadFile = async (url: string, filename: string) => {
+    const downloadFile = async (url: string, filename: string, method: 'GET' | 'POST' = 'GET', body: any = {}) => {
         try {
-            const response = await api.get(url, { responseType: 'blob' });
+            const response = method === 'GET'
+                ? await api.get(url, { responseType: 'blob' })
+                : await api.post(url, body, { responseType: 'blob' });
+
             const blob = new Blob([response.data], { type: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' });
             const link = document.createElement('a');
             link.href = window.URL.createObjectURL(blob);
@@ -261,7 +264,8 @@ export const ClassDetails = () => {
     const handleGenerateReport = (studentId: number) => {
         const student = students.find(s => s.id === studentId);
         const filename = student ? `Relatorio_${student.name.replace(/\s+/g, '_')}.docx` : 'relatorio.docx';
-        downloadFile(`/students/${studentId}/report/docx`, filename);
+        // Student report is POST
+        downloadFile(`/students/${studentId}/report/docx`, filename, 'POST', {});
     };
 
     const handleViewSession = async (sessionId: number) => {
