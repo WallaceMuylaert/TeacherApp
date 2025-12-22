@@ -16,7 +16,6 @@ api.interceptors.response.use(
   (response) => response,
   (error) => {
     if (error.response && error.response.status === 401) {
-      // Treating session expiration as "Not Found/Generic Error" page as requested
       window.location.href = '/404';
     }
     return Promise.reject(error);
