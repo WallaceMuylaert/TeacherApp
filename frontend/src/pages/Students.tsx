@@ -13,6 +13,9 @@ interface Student {
     parent_name?: string;
     parent_phone?: string;
     parent_email?: string;
+    school_year?: string;
+    class_type?: string;
+    active: boolean;
 }
 
 interface EvolutionPoint {
@@ -37,11 +40,11 @@ export const Students = () => {
 
     // Modal States
     const [showCreateModal, setShowCreateModal] = useState(false);
-    const [newStudentData, setNewStudentData] = useState({ name: '', phone: '', parent_name: '', parent_phone: '', parent_email: '' });
+    const [newStudentData, setNewStudentData] = useState({ name: '', phone: '', parent_name: '', parent_phone: '', parent_email: '', school_year: '', class_type: '', active: true });
     const [selectedClassId, setSelectedClassId] = useState<number | ''>(''); // For enrollment
 
     const [editingStudent, setEditingStudent] = useState<Student | null>(null);
-    const [editStudentData, setEditStudentData] = useState({ name: '', phone: '', parent_name: '', parent_phone: '', parent_email: '' });
+    const [editStudentData, setEditStudentData] = useState({ name: '', phone: '', parent_name: '', parent_phone: '', parent_email: '', school_year: '', class_type: '', active: true });
 
     const [deletingStudent, setDeletingStudent] = useState<Student | null>(null);
 
@@ -94,7 +97,7 @@ export const Students = () => {
                 await api.post(`/classes/${selectedClassId}/enroll/${res.data.id}`);
             }
             setShowCreateModal(false);
-            setNewStudentData({ name: '', phone: '', parent_name: '', parent_phone: '', parent_email: '' });
+            setNewStudentData({ name: '', phone: '', parent_name: '', parent_phone: '', parent_email: '', school_year: '', class_type: '', active: true });
             setSelectedClassId('');
             fetchData();
         } catch (e) { alert('Erro ao criar aluno'); }
@@ -280,7 +283,10 @@ export const Students = () => {
                                                         phone: student.phone || '',
                                                         parent_name: student.parent_name || '',
                                                         parent_phone: student.parent_phone || '',
-                                                        parent_email: student.parent_email || ''
+                                                        parent_email: student.parent_email || '',
+                                                        school_year: student.school_year || '',
+                                                        class_type: (student.class_type as any) || '',
+                                                        active: student.active ?? true
                                                     });
                                                 }}
                                                 className="p-2 hover:bg-white/10 text-text-muted hover:text-white rounded-lg transition-colors"
@@ -367,6 +373,32 @@ export const Students = () => {
                                     value={newStudentData.parent_email} onChange={e => setNewStudentData({ ...newStudentData, parent_email: e.target.value })} />
                             </div>
 
+                            <div className="grid grid-cols-2 gap-4">
+                                <div>
+                                    <label className="text-xs font-medium text-text-muted uppercase tracking-wider ml-1">Ano Escolar</label>
+                                    <input className="w-full p-3 bg-bg-dark/50 border border-border rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-primary"
+                                        value={newStudentData.school_year} onChange={e => setNewStudentData({ ...newStudentData, school_year: e.target.value })} 
+                                        placeholder="Ex: 5º Ano" />
+                                </div>
+                                <div>
+                                    <label className="text-xs font-medium text-text-muted uppercase tracking-wider ml-1">Tipo de Turma</label>
+                                    <select className="w-full p-3 bg-bg-dark/50 border border-border rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-primary"
+                                        value={newStudentData.class_type} onChange={e => setNewStudentData({ ...newStudentData, class_type: e.target.value as any })}>
+                                        <option value="">-- Selecione --</option>
+                                        <option value="Semanal">Semanal</option>
+                                        <option value="Quinzenal">Quinzenal</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div className="flex items-center gap-2">
+                                <input type="checkbox" id="new_active" 
+                                    checked={newStudentData.active} 
+                                    onChange={e => setNewStudentData({ ...newStudentData, active: e.target.checked })}
+                                    className="w-4 h-4 rounded border-gray-300 text-primary focus:ring-primary accent-primary"
+                                />
+                                <label htmlFor="new_active" className="text-sm text-white">Aluno Ativo</label>
+                            </div>
+
                             <div className="pt-2 border-t border-white/10 mt-2">
                                 <label className="text-xs font-medium text-text-muted uppercase tracking-wider ml-1">Matricular na Turma (Opcional)</label>
                                 <select
@@ -427,6 +459,32 @@ export const Students = () => {
                                 <label className="text-xs font-medium text-text-muted uppercase tracking-wider ml-1">Email Responsável</label>
                                 <input type="email" className="w-full p-3 bg-bg-dark/50 border border-border rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-primary"
                                     value={editStudentData.parent_email} onChange={e => setEditStudentData({ ...editStudentData, parent_email: e.target.value })} />
+                            </div>
+
+                            <div className="grid grid-cols-2 gap-4">
+                                <div>
+                                    <label className="text-xs font-medium text-text-muted uppercase tracking-wider ml-1">Ano Escolar</label>
+                                    <input className="w-full p-3 bg-bg-dark/50 border border-border rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-primary"
+                                        value={editStudentData.school_year} onChange={e => setEditStudentData({ ...editStudentData, school_year: e.target.value })} 
+                                        placeholder="Ex: 5º Ano" />
+                                </div>
+                                <div>
+                                    <label className="text-xs font-medium text-text-muted uppercase tracking-wider ml-1">Tipo de Turma</label>
+                                    <select className="w-full p-3 bg-bg-dark/50 border border-border rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-primary"
+                                        value={editStudentData.class_type} onChange={e => setEditStudentData({ ...editStudentData, class_type: e.target.value as any })}>
+                                        <option value="">-- Selecione --</option>
+                                        <option value="Semanal">Semanal</option>
+                                        <option value="Quinzenal">Quinzenal</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div className="flex items-center gap-2">
+                                <input type="checkbox" id="edit_active" 
+                                    checked={editStudentData.active} 
+                                    onChange={e => setEditStudentData({ ...editStudentData, active: e.target.checked })}
+                                    className="w-4 h-4 rounded border-gray-300 text-primary focus:ring-primary accent-primary"
+                                />
+                                <label htmlFor="edit_active" className="text-sm text-white">Aluno Ativo</label>
                             </div>
                             <div className="flex justify-end gap-3 mt-6">
                                 <button type="button" onClick={() => setEditingStudent(null)} className="px-4 py-2 text-text-muted hover:text-white">Cancelar</button>

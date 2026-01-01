@@ -8,6 +8,9 @@ class StudentBase(BaseModel):
     parent_name: Optional[str] = None
     parent_phone: Optional[str] = None
     parent_email: Optional[str] = None
+    school_year: Optional[str] = None
+    class_type: Optional[str] = None
+    active: bool = True
 
 class StudentCreate(StudentBase):
     pass
