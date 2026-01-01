@@ -222,6 +222,8 @@ export const Payments = () => {
                             <tr>
                                 <th className="text-left p-4 text-xs font-bold text-text-muted uppercase tracking-wider">Aluno</th>
                                 <th className="text-left p-4 text-xs font-bold text-text-muted uppercase tracking-wider">Responsável</th>
+                                <th className="text-left p-4 text-xs font-bold text-text-muted uppercase tracking-wider">Ano Escolar</th>
+                                <th className="text-left p-4 text-xs font-bold text-text-muted uppercase tracking-wider">Tipo de Aula</th>
                                 <th className="text-center p-4 text-xs font-bold text-text-muted uppercase tracking-wider">Status</th>
                                 <th className="text-right p-4 text-xs font-bold text-text-muted uppercase tracking-wider">Ação</th>
                             </tr>
@@ -237,6 +239,8 @@ export const Payments = () => {
                                             <div className="text-sm text-text-muted">{student.parent_name || '-'}</div>
                                             <div className="text-xs opacity-50">{student.parent_phone}</div>
                                         </td>
+                                        <td className="p-4 text-left">{student.school_year || '-'}</td>
+                                        <td className="p-4 text-left">{student.class_type || '-'}</td>
                                         <td className="p-4 text-center">
                                             <span className={`px-3 py-1 rounded-full text-xs font-bold border ${isPaid ? 'bg-success/10 border-success/30 text-success' : 'bg-warning/10 border-warning/30 text-warning'}`}>
                                                 {isPaid ? 'PAGO' : 'PENDENTE'}
