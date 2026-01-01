@@ -1,29 +1,75 @@
 services:
+  db:
+    image: postgres:15-alpine
+    container_name: teacher_app_db
+    restart: always
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
+      POSTGRES_DB: ${POSTGRES_DB:-student_management}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-postgres}"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
   backend:
     build:
       context: .
-      dockerfile: Dockerfile.backend
+      dockerfile: backend/Dockerfile
     container_name: teacher_app_backend
-    restart: always
-    volumes:
-      - sqlite_data:/app/db
+    # restart: always # Restart desabilitado para debug em dev
+    depends_on:
+      db:
+        condition: service_healthy
     env_file:
       - .env
     environment:
-      - DB_PATH=/app/db/student_management.db
+      - DATABASE_URL=postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgres}@db:5432/${POSTGRES_DB:-student_management}
+      - PYTHONUNBUFFERED=1
+      - SECRET_KEY=${SECRET_KEY:-your-secret-key-here-change-in-production}
+      - ALGORITHM=${ALGORITHM:-HS256}
+      - ACCESS_TOKEN_EXPIRE_MINUTES=${ACCESS_TOKEN_EXPIRE_MINUTES:-30}
+    volumes:
+      - ./backend:/app/backend:rw
+      - ./tests:/app/tests:rw
+    command: uvicorn backend.server:app --host 0.0.0.0 --port 8000 --reload
     ports:
-      - "${PORT_BACKEND}:8000"
+      - "${PORT_BACKEND:-8000}:8000"
 
   frontend:
     build:
       context: .
-      dockerfile: Dockerfile.frontend
+      dockerfile: frontend/Dockerfile
     container_name: teacher_app_frontend
-    restart: always
+    # restart: always
     depends_on:
       - backend
+    environment:
+      - CHOKIDAR_USEPOLLING=true
+      - WATCHPACK_POLLING=true
+      - VITE_API_URL=${VITE_API_URL:-http://localhost:8000/}
+    volumes:
+      - ./frontend:/app/frontend:rw
+      - /app/frontend/node_modules
     ports:
-      - "${PORT_FRONTEND}:80"
+      - "${PORT_FRONTEND:-5173}:5173"
+
+  pgadmin:
+    image: dpage/pgadmin4
+    container_name: teacher_app_pgadmin
+    restart: always
+    environment:
+      PGADMIN_DEFAULT_EMAIL: ${PGADMIN_EMAIL:-admin@admin.com}
+      PGADMIN_DEFAULT_PASSWORD: ${PGADMIN_PASSWORD:-admin}
+    ports:
+      - "5050:80"
+    depends_on:
+      - db
 
 volumes:
-  sqlite_data:
+  postgres_data:

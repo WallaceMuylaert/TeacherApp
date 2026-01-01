@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import api from '../api';
 import { Plus, Save, Calendar, UserPlus, Users, X, FileText, Pencil, Trash2, AlertTriangle, Eye, Download } from 'lucide-react';
+import { formatPhone, unmaskPhone } from '../utils/masks';
 import { Loading } from '../components/Loading';
 
 interface Student {
@@ -213,7 +214,12 @@ export const ClassDetails = () => {
         setCreatingStudent(true);
 
         try {
-            const res = await api.post('/students/', newStudentData);
+            const payload = {
+                ...newStudentData,
+                phone: unmaskPhone(newStudentData.phone),
+                parent_phone: unmaskPhone(newStudentData.parent_phone)
+            };
+            const res = await api.post('/students/', payload);
             await handleEnrollStudent(res.data.id);
             setNewStudentData({ name: '', phone: '', parent_name: '', parent_phone: '', parent_email: '' });
             setShowCreateStudentModal(false);
@@ -225,7 +231,12 @@ export const ClassDetails = () => {
         e.preventDefault();
         if (!editingStudent || !editStudentData.name.trim()) return;
         try {
-            await api.put(`/students/${editingStudent.id}`, editStudentData);
+            const payload = {
+                ...editStudentData,
+                phone: unmaskPhone(editStudentData.phone),
+                parent_phone: unmaskPhone(editStudentData.parent_phone)
+            };
+            await api.put(`/students/${editingStudent.id}`, payload);
             setEditingStudent(null);
             fetchStudents();
         } catch (e) { alert('Erro ao atualizar aluno'); }
@@ -240,9 +251,12 @@ export const ClassDetails = () => {
         } catch (e) { alert('Erro ao excluir aluno'); }
     };
 
-    const downloadFile = async (url: string, filename: string) => {
+    const downloadFile = async (url: string, filename: string, method: 'GET' | 'POST' = 'GET', body: any = {}) => {
         try {
-            const response = await api.get(url, { responseType: 'blob' });
+            const response = method === 'GET'
+                ? await api.get(url, { responseType: 'blob' })
+                : await api.post(url, body, { responseType: 'blob' });
+
             const blob = new Blob([response.data], { type: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' });
             const link = document.createElement('a');
             link.href = window.URL.createObjectURL(blob);
@@ -261,7 +275,8 @@ export const ClassDetails = () => {
     const handleGenerateReport = (studentId: number) => {
         const student = students.find(s => s.id === studentId);
         const filename = student ? `Relatorio_${student.name.replace(/\s+/g, '_')}.docx` : 'relatorio.docx';
-        downloadFile(`/students/${studentId}/report/docx`, filename);
+        // Student report is POST
+        downloadFile(`/students/${studentId}/report/docx`, filename, 'POST', {});
     };
 
     const handleViewSession = async (sessionId: number) => {
@@ -545,7 +560,7 @@ export const ClassDetails = () => {
                 )}
 
                 {activeTab === 'attendance' && (
-                    <div className="glass-card">
+                    <div className="glass-card p-4">
                         <div className="flex justify-between items-center mb-6 border-b border-white/5 pb-4">
                             <h2 className="text-xl font-bold flex items-center gap-2 text-white">
                                 <span className="w-2 h-8 bg-primary rounded-full"></span> Nova Chamada
@@ -797,6 +812,45 @@ export const ClassDetails = () => {
                                     autoFocus
                                 />
                             </div>
+                            <div>
+                                <label className="text-xs font-medium text-text-muted uppercase tracking-wider ml-1">Celular</label>
+                                <input
+                                    className="w-full p-3 bg-bg-dark/50 border border-border rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all"
+                                    value={newStudentData.phone}
+                                    onChange={e => setNewStudentData({ ...newStudentData, phone: formatPhone(e.target.value) })}
+                                    maxLength={15}
+                                    placeholder="(99) 99999-9999"
+                                />
+                            </div>
+                            <div className="grid grid-cols-2 gap-4">
+                                <div>
+                                    <label className="text-xs font-medium text-text-muted uppercase tracking-wider ml-1">Responsável</label>
+                                    <input
+                                        className="w-full p-3 bg-bg-dark/50 border border-border rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all"
+                                        value={newStudentData.parent_name}
+                                        onChange={e => setNewStudentData({ ...newStudentData, parent_name: e.target.value })}
+                                    />
+                                </div>
+                                <div>
+                                    <label className="text-xs font-medium text-text-muted uppercase tracking-wider ml-1">Cel. Responsável</label>
+                                    <input
+                                        className="w-full p-3 bg-bg-dark/50 border border-border rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all"
+                                        value={newStudentData.parent_phone}
+                                        onChange={e => setNewStudentData({ ...newStudentData, parent_phone: formatPhone(e.target.value) })}
+                                        maxLength={15}
+                                        placeholder="(99) 99999-9999"
+                                    />
+                                </div>
+                            </div>
+                            <div>
+                                <label className="text-xs font-medium text-text-muted uppercase tracking-wider ml-1">Email Responsável</label>
+                                <input
+                                    type="email"
+                                    className="w-full p-3 bg-bg-dark/50 border border-border rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all"
+                                    value={newStudentData.parent_email}
+                                    onChange={e => setNewStudentData({ ...newStudentData, parent_email: e.target.value })}
+                                />
+                            </div>
                             <div className="flex justify-end gap-3 mt-6">
                                 <button type="button" onClick={() => setShowCreateStudentModal(false)} className="px-4 py-2 rounded-lg text-text-muted hover:bg-white/5 transition-colors">Cancelar</button>
                                 <button type="submit" disabled={creatingStudent} className="bg-primary hover:bg-primary-hover text-white font-bold py-2 px-6 rounded-lg shadow-lg shadow-primary/20 transition-all cursor-pointer disabled:opacity-50">
@@ -827,6 +881,45 @@ export const ClassDetails = () => {
                                     onChange={e => setEditStudentData({ ...editStudentData, name: e.target.value })}
                                     required
                                     autoFocus
+                                />
+                            </div>
+                            <div>
+                                <label className="text-xs font-medium text-text-muted uppercase tracking-wider ml-1">Celular</label>
+                                <input
+                                    className="w-full p-3 bg-bg-dark/50 border border-border rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all"
+                                    value={editStudentData.phone}
+                                    onChange={e => setEditStudentData({ ...editStudentData, phone: formatPhone(e.target.value) })}
+                                    maxLength={15}
+                                    placeholder="(99) 99999-9999"
+                                />
+                            </div>
+                            <div className="grid grid-cols-2 gap-4">
+                                <div>
+                                    <label className="text-xs font-medium text-text-muted uppercase tracking-wider ml-1">Responsável</label>
+                                    <input
+                                        className="w-full p-3 bg-bg-dark/50 border border-border rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all"
+                                        value={editStudentData.parent_name}
+                                        onChange={e => setEditStudentData({ ...editStudentData, parent_name: e.target.value })}
+                                    />
+                                </div>
+                                <div>
+                                    <label className="text-xs font-medium text-text-muted uppercase tracking-wider ml-1">Cel. Responsável</label>
+                                    <input
+                                        className="w-full p-3 bg-bg-dark/50 border border-border rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all"
+                                        value={editStudentData.parent_phone}
+                                        onChange={e => setEditStudentData({ ...editStudentData, parent_phone: formatPhone(e.target.value) })}
+                                        maxLength={15}
+                                        placeholder="(99) 99999-9999"
+                                    />
+                                </div>
+                            </div>
+                            <div>
+                                <label className="text-xs font-medium text-text-muted uppercase tracking-wider ml-1">Email Responsável</label>
+                                <input
+                                    type="email"
+                                    className="w-full p-3 bg-bg-dark/50 border border-border rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all"
+                                    value={editStudentData.parent_email}
+                                    onChange={e => setEditStudentData({ ...editStudentData, parent_email: e.target.value })}
                                 />
                             </div>
                             <div className="flex justify-end gap-3 mt-6">

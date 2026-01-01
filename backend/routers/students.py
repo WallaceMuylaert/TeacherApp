@@ -26,13 +26,10 @@ def read_students(
 def create_student(student: student_schemas.StudentCreate, db: Session = Depends(database.get_db), current_user: user_schemas.User = Depends(security.get_current_user)):
     return student_crud.create_student(db=db, student=student, user_id=current_user.id)
 
-class StudentUpdate(pydantic.BaseModel):
-    name: str
-
-@router.put("/students/{student_id}")
-def update_student(student_id: int, student_data: StudentUpdate, db: Session = Depends(database.get_db), current_user: user_schemas.User = Depends(security.get_current_user)):
+@router.put("/students/{student_id}", response_model=student_schemas.Student)
+def update_student(student_id: int, student_data: student_schemas.StudentCreate, db: Session = Depends(database.get_db), current_user: user_schemas.User = Depends(security.get_current_user)):
     # Verify ownership logic could be added here (check student -> owner_id)
-    student = student_crud.update_student(db, student_id=student_id, name=student_data.name)
+    student = student_crud.update_student(db, student_id=student_id, student_data=student_data)
     if not student:
         raise HTTPException(status_code=404, detail="Student not found")
     return student
@@ -65,17 +62,23 @@ import base64
 def generate_student_report(
     student_id: int, 
     report_data: student_schemas.StudentReportRequest,
+    month: Optional[int] = None,
+    year: Optional[int] = None,
     db: Session = Depends(database.get_db), 
     current_user: user_schemas.User = Depends(security.get_current_user)
 ):
-    stats = student_crud.get_student_report_stats(db, student_id=student_id)
+    stats = student_crud.get_student_report_stats(db, student_id=student_id, month=month, year=year)
     if not stats:
         raise HTTPException(status_code=404, detail="Student not found")
     
     document = Document()
     
     # Title
-    title = document.add_heading(f'Relatório de Desempenho', 0)
+    title_text = 'Relatório de Desempenho'
+    if month and year:
+        title_text += f' - {month:02d}/{year}'
+    
+    title = document.add_heading(title_text, 0)
     title.alignment = WD_ALIGN_PARAGRAPH.CENTER
     
     # Student Info Section
@@ -173,8 +176,19 @@ def generate_student_report(
     document.save(file_stream)
     file_stream.seek(0)
     
+    # Filename construction
+    safe_name = stats['student'].name.replace(' ', '_')
+    filename = f"Relatorio_{safe_name}"
+    
+    if month and year:
+        filename += f"_{month:02d}_{year}"
+    elif year:
+        filename += f"_{year}"
+        
+    filename += ".docx"
+
     return StreamingResponse(
         file_stream, 
         media_type="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-        headers={"Content-Disposition": f"attachment; filename=Relatorio_{stats['student'].name.replace(' ', '_')}.docx"}
+        headers={"Content-Disposition": f"attachment; filename={filename}"}
     )

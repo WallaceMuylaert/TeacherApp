@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import api from '../api';
 import { Plus, Search, Pencil, Trash, X, AlertTriangle, UserCircle, LineChart as LineChartIcon, Download } from 'lucide-react';
 import html2canvas from 'html2canvas';
+import { formatPhone, unmaskPhone } from '../utils/masks';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import { Loading } from '../components/Loading';
 
@@ -12,6 +13,9 @@ interface Student {
     parent_name?: string;
     parent_phone?: string;
     parent_email?: string;
+    school_year?: string;
+    class_type?: string;
+    active: boolean;
 }
 
 interface EvolutionPoint {
@@ -36,17 +40,19 @@ export const Students = () => {
 
     // Modal States
     const [showCreateModal, setShowCreateModal] = useState(false);
-    const [newStudentData, setNewStudentData] = useState({ name: '', phone: '', parent_name: '', parent_phone: '', parent_email: '' });
+    const [newStudentData, setNewStudentData] = useState({ name: '', phone: '', parent_name: '', parent_phone: '', parent_email: '', school_year: '', class_type: '', active: true });
     const [selectedClassId, setSelectedClassId] = useState<number | ''>(''); // For enrollment
 
     const [editingStudent, setEditingStudent] = useState<Student | null>(null);
-    const [editStudentData, setEditStudentData] = useState({ name: '', phone: '', parent_name: '', parent_phone: '', parent_email: '' });
+    const [editStudentData, setEditStudentData] = useState({ name: '', phone: '', parent_name: '', parent_phone: '', parent_email: '', school_year: '', class_type: '', active: true });
 
     const [deletingStudent, setDeletingStudent] = useState<Student | null>(null);
 
     // Evolution Modal State
     const [viewingEvolution, setViewingEvolution] = useState<Student | null>(null);
     const [evolutionData, setEvolutionData] = useState<EvolutionPoint[]>([]);
+    const [reportMonth, setReportMonth] = useState<number | ''>(''); // '' = Todos
+    const [reportYear, setReportYear] = useState<number>(new Date().getFullYear());
 
 
     useEffect(() => {
@@ -81,12 +87,17 @@ export const Students = () => {
     const handleCreateStudent = async (e: React.FormEvent) => {
         e.preventDefault();
         try {
-            const res = await api.post('/students/', newStudentData);
+            const payload = {
+                ...newStudentData,
+                phone: unmaskPhone(newStudentData.phone),
+                parent_phone: unmaskPhone(newStudentData.parent_phone)
+            };
+            const res = await api.post('/students/', payload);
             if (selectedClassId) {
                 await api.post(`/classes/${selectedClassId}/enroll/${res.data.id}`);
             }
             setShowCreateModal(false);
-            setNewStudentData({ name: '', phone: '', parent_name: '', parent_phone: '', parent_email: '' });
+            setNewStudentData({ name: '', phone: '', parent_name: '', parent_phone: '', parent_email: '', school_year: '', class_type: '', active: true });
             setSelectedClassId('');
             fetchData();
         } catch (e) { alert('Erro ao criar aluno'); }
@@ -96,7 +107,12 @@ export const Students = () => {
         e.preventDefault();
         if (!editingStudent) return;
         try {
-            await api.put(`/students/${editingStudent.id}`, editStudentData);
+            const payload = {
+                ...editStudentData,
+                phone: unmaskPhone(editStudentData.phone),
+                parent_phone: unmaskPhone(editStudentData.parent_phone)
+            };
+            await api.put(`/students/${editingStudent.id}`, payload);
             setEditingStudent(null);
             fetchData();
         } catch (e) { alert('Erro ao atualizar aluno'); }
@@ -130,18 +146,33 @@ export const Students = () => {
         }
 
         try {
-            // Updated to use POST and send chart image
-            const response = await api.post(`/students/${viewingEvolution.id}/report/docx`, {
+            let requestUrl = `/students/${viewingEvolution.id}/report/docx`;
+
+            if (reportMonth !== '') {
+                requestUrl += `?month=${reportMonth}&year=${reportYear}`;
+            }
+
+            const response = await api.post(requestUrl, {
                 chart_image: chartImage
             }, {
                 responseType: 'blob'
             });
 
+            // Construction of filename
+            let datePart = '';
+            if (reportMonth !== '') {
+                datePart = `_${reportMonth.toString().padStart(2, '0')}_${reportYear}`;
+            } else {
+                datePart = `_${reportYear}`;
+            }
+            const safeName = viewingEvolution.name.replace(/\s+/g, '_');
+            const filename = `Relatorio_${safeName}${datePart}.docx`;
+
             // Create download link
-            const url = window.URL.createObjectURL(new Blob([response.data]));
+            const downloadUrl = window.URL.createObjectURL(new Blob([response.data]));
             const link = document.createElement('a');
-            link.href = url;
-            link.setAttribute('download', `Relatorio_${viewingEvolution.name.replace(/\s+/g, '_')}.docx`);
+            link.href = downloadUrl;
+            link.setAttribute('download', filename);
             document.body.appendChild(link);
             link.click();
             link.remove();
@@ -154,12 +185,26 @@ export const Students = () => {
     const handleViewEvolution = async (student: Student) => {
         setViewingEvolution(student);
         setEvolutionData([]);
+        setReportMonth(''); // Default to All
+        setReportYear(new Date().getFullYear());
         try {
             const res = await api.get(`/students/${student.id}/evolution`);
             // Parse dates if necessary, recharts handles strings usually but better ensure
             setEvolutionData(res.data);
         } catch (e) { console.error(e); alert('Erro ao buscar evolução'); }
     };
+
+    // Filter data for chart
+    const getFilteredEvolutionData = () => {
+        if (reportMonth === '') return evolutionData;
+        return evolutionData.filter(d => {
+            const date = new Date(d.date);
+            // Javascript months are 0-indexed
+            return date.getMonth() + 1 === Number(reportMonth) && date.getFullYear() === Number(reportYear);
+        });
+    };
+
+    const filteredEvolutionData = getFilteredEvolutionData();
 
 
     return (
@@ -238,7 +283,10 @@ export const Students = () => {
                                                         phone: student.phone || '',
                                                         parent_name: student.parent_name || '',
                                                         parent_phone: student.parent_phone || '',
-                                                        parent_email: student.parent_email || ''
+                                                        parent_email: student.parent_email || '',
+                                                        school_year: student.school_year || '',
+                                                        class_type: (student.class_type as any) || '',
+                                                        active: student.active ?? true
                                                     });
                                                 }}
                                                 className="p-2 hover:bg-white/10 text-text-muted hover:text-white rounded-lg transition-colors"
@@ -299,7 +347,10 @@ export const Students = () => {
                             <div>
                                 <label className="text-xs font-medium text-text-muted uppercase tracking-wider ml-1">Celular</label>
                                 <input className="w-full p-3 bg-bg-dark/50 border border-border rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-primary"
-                                    value={newStudentData.phone} onChange={e => setNewStudentData({ ...newStudentData, phone: e.target.value })} placeholder="(99) 99999-9999" />
+                                    value={newStudentData.phone}
+                                    onChange={e => setNewStudentData({ ...newStudentData, phone: formatPhone(e.target.value) })}
+                                    maxLength={15}
+                                    placeholder="(99) 99999-9999" />
                             </div>
                             <div className="grid grid-cols-2 gap-4">
                                 <div>
@@ -308,15 +359,44 @@ export const Students = () => {
                                         value={newStudentData.parent_name} onChange={e => setNewStudentData({ ...newStudentData, parent_name: e.target.value })} />
                                 </div>
                                 <div>
-                                    <label className="text-xs font-medium text-text-muted uppercase tracking-wider ml-1">Tel. Responsável</label>
+                                    <label className="text-xs font-medium text-text-muted uppercase tracking-wider ml-1">Cel. Responsável</label>
                                     <input className="w-full p-3 bg-bg-dark/50 border border-border rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-primary"
-                                        value={newStudentData.parent_phone} onChange={e => setNewStudentData({ ...newStudentData, parent_phone: e.target.value })} />
+                                        value={newStudentData.parent_phone}
+                                        onChange={e => setNewStudentData({ ...newStudentData, parent_phone: formatPhone(e.target.value) })}
+                                        maxLength={15}
+                                        placeholder="(99) 99999-9999" />
                                 </div>
                             </div>
                             <div>
                                 <label className="text-xs font-medium text-text-muted uppercase tracking-wider ml-1">Email Responsável</label>
-                                <input className="w-full p-3 bg-bg-dark/50 border border-border rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-primary"
+                                <input type="email" className="w-full p-3 bg-bg-dark/50 border border-border rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-primary"
                                     value={newStudentData.parent_email} onChange={e => setNewStudentData({ ...newStudentData, parent_email: e.target.value })} />
+                            </div>
+
+                            <div className="grid grid-cols-2 gap-4">
+                                <div>
+                                    <label className="text-xs font-medium text-text-muted uppercase tracking-wider ml-1">Ano Escolar</label>
+                                    <input className="w-full p-3 bg-bg-dark/50 border border-border rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-primary"
+                                        value={newStudentData.school_year} onChange={e => setNewStudentData({ ...newStudentData, school_year: e.target.value })} 
+                                        placeholder="Ex: 5º Ano" />
+                                </div>
+                                <div>
+                                    <label className="text-xs font-medium text-text-muted uppercase tracking-wider ml-1">Tipo de Turma</label>
+                                    <select className="w-full p-3 bg-bg-dark/50 border border-border rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-primary"
+                                        value={newStudentData.class_type} onChange={e => setNewStudentData({ ...newStudentData, class_type: e.target.value as any })}>
+                                        <option value="">-- Selecione --</option>
+                                        <option value="Semanal">Semanal</option>
+                                        <option value="Quinzenal">Quinzenal</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div className="flex items-center gap-2">
+                                <input type="checkbox" id="new_active" 
+                                    checked={newStudentData.active} 
+                                    onChange={e => setNewStudentData({ ...newStudentData, active: e.target.checked })}
+                                    className="w-4 h-4 rounded border-gray-300 text-primary focus:ring-primary accent-primary"
+                                />
+                                <label htmlFor="new_active" className="text-sm text-white">Aluno Ativo</label>
                             </div>
 
                             <div className="pt-2 border-t border-white/10 mt-2">
@@ -355,7 +435,10 @@ export const Students = () => {
                             <div>
                                 <label className="text-xs font-medium text-text-muted uppercase tracking-wider ml-1">Celular</label>
                                 <input className="w-full p-3 bg-bg-dark/50 border border-border rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-primary"
-                                    value={editStudentData.phone} onChange={e => setEditStudentData({ ...editStudentData, phone: e.target.value })} />
+                                    value={editStudentData.phone}
+                                    onChange={e => setEditStudentData({ ...editStudentData, phone: formatPhone(e.target.value) })}
+                                    maxLength={15}
+                                    placeholder="(99) 99999-9999" />
                             </div>
                             <div className="grid grid-cols-2 gap-4">
                                 <div>
@@ -364,15 +447,44 @@ export const Students = () => {
                                         value={editStudentData.parent_name} onChange={e => setEditStudentData({ ...editStudentData, parent_name: e.target.value })} />
                                 </div>
                                 <div>
-                                    <label className="text-xs font-medium text-text-muted uppercase tracking-wider ml-1">Tel. Responsável</label>
+                                    <label className="text-xs font-medium text-text-muted uppercase tracking-wider ml-1">Cel. Responsável</label>
                                     <input className="w-full p-3 bg-bg-dark/50 border border-border rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-primary"
-                                        value={editStudentData.parent_phone} onChange={e => setEditStudentData({ ...editStudentData, parent_phone: e.target.value })} />
+                                        value={editStudentData.parent_phone}
+                                        onChange={e => setEditStudentData({ ...editStudentData, parent_phone: formatPhone(e.target.value) })}
+                                        maxLength={15}
+                                        placeholder="(99) 99999-9999" />
                                 </div>
                             </div>
                             <div>
                                 <label className="text-xs font-medium text-text-muted uppercase tracking-wider ml-1">Email Responsável</label>
-                                <input className="w-full p-3 bg-bg-dark/50 border border-border rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-primary"
+                                <input type="email" className="w-full p-3 bg-bg-dark/50 border border-border rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-primary"
                                     value={editStudentData.parent_email} onChange={e => setEditStudentData({ ...editStudentData, parent_email: e.target.value })} />
+                            </div>
+
+                            <div className="grid grid-cols-2 gap-4">
+                                <div>
+                                    <label className="text-xs font-medium text-text-muted uppercase tracking-wider ml-1">Ano Escolar</label>
+                                    <input className="w-full p-3 bg-bg-dark/50 border border-border rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-primary"
+                                        value={editStudentData.school_year} onChange={e => setEditStudentData({ ...editStudentData, school_year: e.target.value })} 
+                                        placeholder="Ex: 5º Ano" />
+                                </div>
+                                <div>
+                                    <label className="text-xs font-medium text-text-muted uppercase tracking-wider ml-1">Tipo de Turma</label>
+                                    <select className="w-full p-3 bg-bg-dark/50 border border-border rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-primary"
+                                        value={editStudentData.class_type} onChange={e => setEditStudentData({ ...editStudentData, class_type: e.target.value as any })}>
+                                        <option value="">-- Selecione --</option>
+                                        <option value="Semanal">Semanal</option>
+                                        <option value="Quinzenal">Quinzenal</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div className="flex items-center gap-2">
+                                <input type="checkbox" id="edit_active" 
+                                    checked={editStudentData.active} 
+                                    onChange={e => setEditStudentData({ ...editStudentData, active: e.target.checked })}
+                                    className="w-4 h-4 rounded border-gray-300 text-primary focus:ring-primary accent-primary"
+                                />
+                                <label htmlFor="edit_active" className="text-sm text-white">Aluno Ativo</label>
                             </div>
                             <div className="flex justify-end gap-3 mt-6">
                                 <button type="button" onClick={() => setEditingStudent(null)} className="px-4 py-2 text-text-muted hover:text-white">Cancelar</button>
@@ -391,19 +503,41 @@ export const Students = () => {
 
                         <div className="flex justify-between items-center mb-6">
                             <h3 className="text-2xl font-bold text-white">Evolução: {viewingEvolution.name}</h3>
-                            <button
-                                onClick={handleDownloadReport}
-                                className="flex items-center gap-2 px-4 py-2 bg-success/20 text-success hover:bg-success hover:text-white rounded-lg transition-colors font-medium text-sm"
-                            >
-                                <Download size={18} />
-                                Baixar Relatório
-                            </button>
+                            <div className="flex gap-2">
+                                <select
+                                    value={reportMonth}
+                                    onChange={e => setReportMonth(e.target.value === '' ? '' : Number(e.target.value))}
+                                    className="bg-bg-dark border border-white/10 rounded-lg px-3 py-1 text-white text-sm"
+                                >
+                                    <option value="">Todos os Meses</option>
+                                    {Array.from({ length: 12 }, (_, i) => i + 1).map(m => (
+                                        <option key={m} value={m}>{new Date(0, m - 1).toLocaleString('pt-BR', { month: 'long' })}</option>
+                                    ))}
+                                </select>
+                                <select
+                                    value={reportYear}
+                                    onChange={e => setReportYear(Number(e.target.value))}
+                                    className="bg-bg-dark border border-white/10 rounded-lg px-3 py-1 text-white text-sm"
+                                    disabled={reportMonth === ''}
+                                >
+                                    {Array.from({ length: 10 }, (_, i) => new Date().getFullYear() - 5 + i).map(y => (
+                                        <option key={y} value={y}>{y}</option>
+                                    ))}
+                                </select>
+                                <button
+                                    onClick={handleDownloadReport}
+                                    className="flex items-center gap-2 px-4 py-2 bg-success/20 text-success hover:bg-success hover:text-white rounded-lg transition-colors font-medium text-sm"
+                                >
+                                    <Download size={18} />
+                                    Baixar Relatório
+                                </button>
+                            </div>
                         </div>
 
                         <div id="evolution-chart-container" className="h-[400px] w-full bg-bg-card p-4 rounded-xl">
-                            {evolutionData.length > 0 ? (
+                            {filteredEvolutionData.length > 0 ? (
                                 <ResponsiveContainer width="100%" height="100%">
-                                    <LineChart data={evolutionData}>
+                                    <LineChart data={filteredEvolutionData}>
                                         <CartesianGrid strokeDasharray="3 3" stroke="#ffffff20" />
                                         <XAxis dataKey="date" stroke="#9ca3af" />
                                         <YAxis stroke="#9ca3af" domain={[0, 10]} />

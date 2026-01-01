@@ -6,6 +6,7 @@ import { ClassDetails } from './pages/ClassDetails';
 import { Students } from './pages/Students';
 import { Payments } from './pages/Payments';
 import Admin from './pages/Admin';
+import { NotFound } from './pages/NotFound';
 import { Layout } from './components/Layout';
 
 import type { ReactNode } from 'react';
@@ -32,6 +33,7 @@ function AppRoutes() {
         <Route path="payments" element={<Payments />} />
         <Route path="admin" element={<Admin />} /> {/* Added Admin route as a nested route */}
       </Route>
+      <Route path="*" element={<NotFound />} />
     </Routes>
   );
 }
