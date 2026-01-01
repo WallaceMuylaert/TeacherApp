@@ -252,6 +252,8 @@ export const Students = () => {
                                 <th className="text-left p-4 text-xs font-bold text-text-muted uppercase tracking-wider">Nome</th>
                                 <th className="text-left p-4 text-xs font-bold text-text-muted uppercase tracking-wider">Contato</th>
                                 <th className="text-left p-4 text-xs font-bold text-text-muted uppercase tracking-wider">Responsável</th>
+                                <th className="text-left p-4 text-xs font-bold text-text-muted uppercase tracking-wider">Ano Escolar</th>
+                                <th className="text-left p-4 text-xs font-bold text-text-muted uppercase tracking-wider">Tipo de Aula</th>
                                 <th className="text-right p-4 text-xs font-bold text-text-muted uppercase tracking-wider">Ações</th>
                             </tr>
                         </thead>
@@ -266,6 +268,8 @@ export const Students = () => {
                                         <div className="text-sm text-white">{student.parent_name || '-'}</div>
                                         <div className="text-xs text-text-muted">{student.parent_phone}</div>
                                     </td>
+                                    <td className="p-4 text-text-muted text-sm">{student.school_year || '-'}</td>
+                                    <td className="p-4 text-text-muted text-sm">{student.class_type || '-'}</td>
                                     <td className="p-4 text-right">
                                         <div className="flex justify-end gap-2">
                                             <button
