@@ -750,19 +750,25 @@ export const ClassDetails = () => {
 
             {activeTab === 'history' && (
                 <div className="grid gap-4">
-                    {sessions.map(sess => (
-                        <div key={sess.id} className="glass-card p-4 hover:border-primary/30 transition-colors">
-                            <div className="flex justify-between items-center">
-                                <div>
-                                    <h3 className="font-bold text-white text-lg">{sess.description}</h3>
-                                    <p className="text-text-muted text-sm">{sess.date}</p>
+                    {sessions
+                        .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())
+                        .map((sess, index) => {
+                            const dynamicLabel = `Aula ${String(index + 1).padStart(2, '0')}`;
+                            const displayTitle = sess.description?.match(/^Aula \d+$/) ? dynamicLabel : sess.description;
+                            return (
+                                <div key={sess.id} className="glass-card p-4 hover:border-primary/30 transition-colors">
+                                    <div className="flex justify-between items-center">
+                                        <div>
+                                            <h3 className="font-bold text-white text-lg">{displayTitle}</h3>
+                                            <p className="text-text-muted text-sm">{sess.date}</p>
+                                        </div>
+                                        <button onClick={() => handleViewSession(sess.id)} disabled={loadingSession} className="text-primary hover:text-white cursor-pointer transition-colors px-3 py-1 bg-white/5 rounded-lg text-sm flex items-center gap-2">
+                                            <Eye size={16} /> Ver Detalhes
+                                        </button>
+                                    </div>
                                 </div>
-                                <button onClick={() => handleViewSession(sess.id)} disabled={loadingSession} className="text-primary hover:text-white cursor-pointer transition-colors px-3 py-1 bg-white/5 rounded-lg text-sm flex items-center gap-2">
-                                    <Eye size={16} /> Ver Detalhes
-                                </button>
-                            </div>
-                        </div>
-                    ))}
+                            );
+                        })}
                     {sessions.length === 0 && (
                         <div className="glass-card p-8 text-center text-text-muted italic">
                             Nenhuma chamada registrada até o momento.

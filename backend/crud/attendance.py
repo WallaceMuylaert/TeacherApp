@@ -83,7 +83,7 @@ def update_attendance_session(db: Session, session_id: int, session_data: Attend
     return db_session
 
 def get_class_attendance_sessions(db: Session, class_id: int):
-    return db.query(AttendanceSession).filter(AttendanceSession.class_id == class_id).all()
+    return db.query(AttendanceSession).filter(AttendanceSession.class_id == class_id).order_by(AttendanceSession.date.asc()).all()
 
 def get_attendance_session(db: Session, session_id: int):
     return db.query(AttendanceSession).options(joinedload(AttendanceSession.logs).joinedload(AttendanceLog.student)).filter(AttendanceSession.id == session_id).first()
