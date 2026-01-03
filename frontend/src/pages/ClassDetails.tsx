@@ -1,8 +1,10 @@
 import React, { useEffect, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import api from '../api';
-import { Plus, Save, Calendar, UserPlus, Users, X, FileText, Pencil, Trash2, AlertTriangle, Eye, Download } from 'lucide-react';
+import { Plus, Save, Calendar, Users, X, FileText, Pencil, Trash2, AlertTriangle, Eye, Download } from 'lucide-react';
+import { formatPhone, unmaskPhone, formatCurrency, parseCurrency } from '../utils/masks';
 import { Loading } from '../components/Loading';
+import { ManageStudentsModal } from '../components/ManageStudentsModal';
 
 interface Student {
     id: number;
@@ -59,16 +61,27 @@ interface Payment {
     student?: Student;
 }
 
+interface PaymentInput {
+    student_id: number;
+    status: string;
+    amount: number;
+    id?: number;
+    paid_at?: string | null;
+}
+
 export const ClassDetails = () => {
     const { id } = useParams<{ id: string }>();
     const [classData, setClassData] = useState<ClassModel | null>(null);
     const [students, setStudents] = useState<Student[]>([]);
     const [allStudents, setAllStudents] = useState<Student[]>([]);
     const [sessions, setSessions] = useState<AttendanceSession[]>([]);
-    const [payments, setPayments] = useState<Payment[]>([]);
 
     const [activeTab, setActiveTab] = useState<'attendance' | 'students' | 'history' | 'payments'>('attendance');
     const [showEnrollModal, setShowEnrollModal] = useState(false);
+
+    // Payments Local State
+    const [localPayments, setLocalPayments] = useState<Record<number, PaymentInput>>({});
+    const [savingPayments, setSavingPayments] = useState(false);
 
     // New Student Modal State
     const [showCreateStudentModal, setShowCreateStudentModal] = useState(false);
@@ -159,8 +172,23 @@ export const ClassDetails = () => {
         try {
             await api.post(`/classes/${id}/enroll/${studentId}`);
             fetchStudents();
-            setShowEnrollModal(false);
-        } catch (e) { alert('Erro ao matricular'); }
+            showNotification('Aluno matriculado!', 'success');
+        } catch (e) { showNotification('Erro ao matricular', 'error'); }
+    };
+
+    const handleUnenrollStudent = async (studentId: number) => {
+        requestConfirmation(
+            'Remover Aluno da Turma?',
+            <>Tem certeza que deseja remover este aluno da turma? O histórico de presença <strong>desta turma</strong> será mantido, mas ele não aparecerá mais na lista.</>,
+            async () => {
+                try {
+                    await api.delete(`/classes/${id}/enroll/${studentId}`);
+                    fetchStudents();
+                    showNotification('Aluno removido da turma!', 'success');
+                } catch (e) { showNotification('Erro ao remover aluno', 'error'); }
+            },
+            'warning'
+        );
     };
 
     const fetchPayments = async () => {
@@ -173,29 +201,69 @@ export const ClassDetails = () => {
             // Filter payments for students in this class
             const classStudentIds = students.map(s => s.id);
             const classPayments = res.data.filter((p: Payment) => classStudentIds.includes(p.student_id));
-            setPayments(classPayments);
+
+            // Initialize Local State
+            const initialPayments: Record<number, PaymentInput> = {};
+            students.forEach(s => {
+                const existing = classPayments.find((p: Payment) => p.student_id === s.id);
+                initialPayments[s.id] = existing ? {
+                    ...existing,
+                    amount: existing.amount || 0
+                } : {
+                    student_id: s.id,
+                    status: 'PENDING',
+                    amount: 0
+                };
+            });
+            setLocalPayments(initialPayments);
         } catch (e) { console.error(e); }
     };
 
-    const handleTogglePayment = async (studentId: number, currentStatus: string, paymentId?: number) => {
-        const newStatus = currentStatus === 'PAID' ? 'PENDING' : 'PAID';
+    const updateLocalPayment = (studentId: number, field: keyof PaymentInput, value: any) => {
+        setLocalPayments(prev => ({
+            ...prev,
+            [studentId]: { ...prev[studentId], [field]: value }
+        }));
+    };
+
+    const handleSavePayments = async () => {
+        setSavingPayments(true);
         try {
-            if (paymentId) {
-                await api.put(`/payments/${paymentId}/status?status=${newStatus}`);
-            } else {
-                await api.post('/payments/', {
-                    student_id: studentId,
+            const updates = Object.values(localPayments);
+            // Process updates sequentially or parallel
+            await Promise.all(updates.map(async (p) => {
+                const payload = {
+                    student_id: p.student_id,
                     month: selectedMonth,
                     year: selectedYear,
-                    amount: 0, // Default or prompt
-                    status: newStatus,
-                    paid_at: newStatus === 'PAID' ? new Date().toISOString().split('T')[0] : null
-                });
-            }
-            fetchPayments();
-            showNotification('Pagamento atualizado!', 'success');
+                    status: p.status,
+                    amount: Number(p.amount),
+                    paid_at: p.status === 'PAID' ? new Date().toISOString().split('T')[0] : null
+                };
+
+                if (p.id) {
+                    await api.put(`/payments/${p.id}`, payload);
+                } else {
+                    // Only create if status is PAID or amount > 0 to avoid spamming empty pendings? 
+                    // Verify if backend allows duplicate defaults. current implementation fetches by year/month.
+                    // If we save 'PENDING' 0, it creates a record. It's fine.
+                    // But to avoid creating 30 records for nothing, maybe check if changed?
+                    // For simplicity and "Save" button expectation, we save valid inputs.
+                    // Ideally we check if it differs from DB. But let's just Upsert logic.
+                    // Our backend create_payment doesn't check existence! It might duplicate.
+                    // We should check if p.id exists. If not, create.
+                    // But if we have initial 'PENDING' from fetchPayments (which didn't find record), it has no ID.
+                    await api.post('/payments/', payload);
+                }
+            }));
+
+            showNotification('Pagamentos salvos com sucesso!', 'success');
+            fetchPayments(); // Refresh to get IDs
         } catch (e) {
-            showNotification('Erro ao atualizar pagamento', 'error');
+            console.error(e);
+            showNotification('Erro ao salvar pagamentos', 'error');
+        } finally {
+            setSavingPayments(false);
         }
     };
 
@@ -213,7 +281,12 @@ export const ClassDetails = () => {
         setCreatingStudent(true);
 
         try {
-            const res = await api.post('/students/', newStudentData);
+            const payload = {
+                ...newStudentData,
+                phone: unmaskPhone(newStudentData.phone),
+                parent_phone: unmaskPhone(newStudentData.parent_phone)
+            };
+            const res = await api.post('/students/', payload);
             await handleEnrollStudent(res.data.id);
             setNewStudentData({ name: '', phone: '', parent_name: '', parent_phone: '', parent_email: '' });
             setShowCreateStudentModal(false);
@@ -225,7 +298,12 @@ export const ClassDetails = () => {
         e.preventDefault();
         if (!editingStudent || !editStudentData.name.trim()) return;
         try {
-            await api.put(`/students/${editingStudent.id}`, editStudentData);
+            const payload = {
+                ...editStudentData,
+                phone: unmaskPhone(editStudentData.phone),
+                parent_phone: unmaskPhone(editStudentData.parent_phone)
+            };
+            await api.put(`/students/${editingStudent.id}`, payload);
             setEditingStudent(null);
             fetchStudents();
         } catch (e) { alert('Erro ao atualizar aluno'); }
@@ -240,9 +318,12 @@ export const ClassDetails = () => {
         } catch (e) { alert('Erro ao excluir aluno'); }
     };
 
-    const downloadFile = async (url: string, filename: string) => {
+    const downloadFile = async (url: string, filename: string, method: 'GET' | 'POST' = 'GET', body: any = {}) => {
         try {
-            const response = await api.get(url, { responseType: 'blob' });
+            const response = method === 'GET'
+                ? await api.get(url, { responseType: 'blob' })
+                : await api.post(url, body, { responseType: 'blob' });
+
             const blob = new Blob([response.data], { type: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' });
             const link = document.createElement('a');
             link.href = window.URL.createObjectURL(blob);
@@ -261,7 +342,8 @@ export const ClassDetails = () => {
     const handleGenerateReport = (studentId: number) => {
         const student = students.find(s => s.id === studentId);
         const filename = student ? `Relatorio_${student.name.replace(/\s+/g, '_')}.docx` : 'relatorio.docx';
-        downloadFile(`/students/${studentId}/report/docx`, filename);
+        // Student report is POST
+        downloadFile(`/students/${studentId}/report/docx`, filename, 'POST', {});
     };
 
     const handleViewSession = async (sessionId: number) => {
@@ -493,7 +575,7 @@ export const ClassDetails = () => {
                         <div className="flex flex-col sm:flex-row justify-between mb-6 gap-4 border-b border-white/5 pb-4">
                             <h2 className="text-xl font-bold flex items-center gap-2"><Users className="text-primary" size={20} /> Alunos Matriculados <span className="bg-bg-dark px-2 py-0.5 rounded-full text-xs text-text-muted">{students.length}</span></h2>
                             <div className="flex flex-col sm:flex-row gap-3">
-                                <button onClick={loadAllStudents} className="btn-outline text-sm px-3 py-1.5"><UserPlus size={16} /> Matricular Existente</button>
+                                <button onClick={loadAllStudents} className="btn-outline text-sm px-3 py-1.5"><Users size={16} /> Gerenciar Alunos</button>
                                 <button onClick={() => setShowCreateStudentModal(true)} className="bg-primary hover:bg-primary-hover text-white px-3 py-1.5 rounded-lg text-sm font-medium flex items-center gap-2 shadow-lg shadow-primary/20"><Plus size={16} /> Novo Aluno</button>
                             </div>
                         </div>
@@ -545,14 +627,14 @@ export const ClassDetails = () => {
                 )}
 
                 {activeTab === 'attendance' && (
-                    <div className="glass-card">
+                    <div className="glass-card p-4">
                         <div className="flex justify-between items-center mb-6 border-b border-white/5 pb-4">
                             <h2 className="text-xl font-bold flex items-center gap-2 text-white">
                                 <span className="w-2 h-8 bg-primary rounded-full"></span> Nova Chamada
                             </h2>
                             <div className="flex items-center gap-3">
                                 <button onClick={loadAllStudents} className="btn-outline text-sm px-3 py-1.5 border-white/10 hover:bg-white/5">
-                                    <UserPlus size={16} /> Matricular Aluno
+                                    <Users size={16} /> Gerenciar Alunos
                                 </button>
                                 <div className="text-sm text-text-muted bg-bg-dark px-3 py-1 rounded-lg border border-white/5">
                                     {new Date().toLocaleDateString()}
@@ -668,19 +750,25 @@ export const ClassDetails = () => {
 
             {activeTab === 'history' && (
                 <div className="grid gap-4">
-                    {sessions.map(sess => (
-                        <div key={sess.id} className="glass-card p-4 hover:border-primary/30 transition-colors">
-                            <div className="flex justify-between items-center">
-                                <div>
-                                    <h3 className="font-bold text-white text-lg">{sess.description}</h3>
-                                    <p className="text-text-muted text-sm">{sess.date}</p>
+                    {sessions
+                        .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())
+                        .map((sess, index) => {
+                            const dynamicLabel = `Aula ${String(index + 1).padStart(2, '0')}`;
+                            const displayTitle = sess.description?.match(/^Aula \d+$/) ? dynamicLabel : sess.description;
+                            return (
+                                <div key={sess.id} className="glass-card p-4 hover:border-primary/30 transition-colors">
+                                    <div className="flex justify-between items-center">
+                                        <div>
+                                            <h3 className="font-bold text-white text-lg">{displayTitle}</h3>
+                                            <p className="text-text-muted text-sm">{sess.date}</p>
+                                        </div>
+                                        <button onClick={() => handleViewSession(sess.id)} disabled={loadingSession} className="text-primary hover:text-white cursor-pointer transition-colors px-3 py-1 bg-white/5 rounded-lg text-sm flex items-center gap-2">
+                                            <Eye size={16} /> Ver Detalhes
+                                        </button>
+                                    </div>
                                 </div>
-                                <button onClick={() => handleViewSession(sess.id)} disabled={loadingSession} className="text-primary hover:text-white cursor-pointer transition-colors px-3 py-1 bg-white/5 rounded-lg text-sm flex items-center gap-2">
-                                    <Eye size={16} /> Ver Detalhes
-                                </button>
-                            </div>
-                        </div>
-                    ))}
+                            );
+                        })}
                     {sessions.length === 0 && (
                         <div className="glass-card p-8 text-center text-text-muted italic">
                             Nenhuma chamada registrada até o momento.
@@ -713,37 +801,47 @@ export const ClassDetails = () => {
                         <table className="w-full">
                             <thead>
                                 <tr className="border-b border-white/10">
-                                    <th className="text-left p-4 text-text-muted font-semibold uppercase text-xs tracking-wider">Aluno</th>
-                                    <th className="text-left p-4 text-text-muted font-semibold uppercase text-xs tracking-wider">Responsável</th>
-                                    <th className="text-center p-4 text-text-muted font-semibold uppercase text-xs tracking-wider">Status</th>
-                                    <th className="text-right p-4 text-text-muted font-semibold uppercase text-xs tracking-wider">Ação</th>
+                                    <th className="text-left p-4 text-xs font-bold text-text-muted uppercase tracking-wider w-[200px]">Status</th>
+                                    <th className="text-left p-4 text-xs font-bold text-text-muted uppercase tracking-wider w-[200px]">Valor Pago</th>
                                 </tr>
                             </thead>
-                            <tbody>
+                            <tbody className="divide-y divide-white/5">
                                 {students.map(s => {
-                                    const payment = payments.find(p => p.student_id === s.id);
-                                    const isPaid = payment?.status === 'PAID';
+                                    const payment = localPayments[s.id] || { status: 'PENDING', amount: 0, student_id: s.id };
+                                    const isPaid = payment.status === 'PAID';
                                     return (
-                                        <tr key={s.id} className="border-b border-white/5 hover:bg-white/5 transition-colors">
-                                            <td className="p-4 font-medium text-text-main">{s.name}</td>
+                                        <tr key={s.id} className="hover:bg-white/5 transition-colors group">
+                                            <td className="p-4 font-medium text-white">{s.name}</td>
                                             <td className="p-4 text-text-muted text-sm">
                                                 <div className="flex flex-col">
                                                     <span>{s.parent_name || '-'}</span>
                                                     <span className="text-xs opacity-50">{s.parent_phone}</span>
                                                 </div>
                                             </td>
-                                            <td className="p-4 text-center">
-                                                <span className={`px-2 py-1 rounded-full text-xs font-bold ${isPaid ? 'bg-success/20 text-success' : 'bg-warning/20 text-warning'}`}>
-                                                    {isPaid ? 'PAGO' : 'PENDENTE'}
-                                                </span>
-                                            </td>
-                                            <td className="p-4 text-right">
-                                                <button
-                                                    onClick={() => handleTogglePayment(s.id, payment?.status || 'PENDING', payment?.id)}
-                                                    className={`px-3 py-1 rounded-lg text-xs font-bold transition-all ${isPaid ? 'bg-white/10 text-white hover:bg-danger/20 hover:text-danger' : 'bg-success text-white hover:bg-success-hover shadow-lg shadow-success/20'}`}
+                                            <td className="p-4">
+                                                <select
+                                                    className={`w-full p-2 rounded-lg text-sm border-none focus:ring-2 focus:ring-primary outline-none transition-colors cursor-pointer ${isPaid ? 'bg-success/20 text-success' : 'bg-warning/20 text-warning'}`}
+                                                    value={payment.status}
+                                                    onChange={e => updateLocalPayment(s.id, 'status', e.target.value)}
                                                 >
-                                                    {isPaid ? 'Marcar Pendente' : 'Marcar Pago'}
-                                                </button>
+                                                    <option value="PENDING">Pendente</option>
+                                                    <option value="PAID">Pago</option>
+                                                </select>
+                                            </td>
+                                            <td className="p-4">
+                                                <div className="relative">
+                                                    <input
+                                                        type="text"
+                                                        className={`w-full bg-transparent border-b outline-none py-1 text-sm font-mono transition-colors text-right ${isPaid
+                                                            ? 'border-white/10 focus:border-primary text-white'
+                                                            : 'border-transparent text-text-muted cursor-not-allowed'
+                                                            }`}
+                                                        value={formatCurrency(payment.amount)}
+                                                        onChange={e => updateLocalPayment(s.id, 'amount', parseCurrency(e.target.value))}
+                                                        disabled={!isPaid}
+                                                        placeholder="R$ 0,00"
+                                                    />
+                                                </div>
                                             </td>
                                         </tr>
                                     );
@@ -751,29 +849,44 @@ export const ClassDetails = () => {
                             </tbody>
                         </table>
                     </div>
+                    <div className="mt-8 flex justify-end">
+                        <button
+                            onClick={handleSavePayments}
+                            disabled={savingPayments}
+                            className={`
+                                bg-gradient-to-r from-success to-success-hover text-white px-8 py-3 rounded-xl font-bold shadow-lg shadow-success/25 
+                                transition-all flex items-center gap-2
+                                ${savingPayments ? 'opacity-70 cursor-wait' : 'hover:shadow-success/40 hover:-translate-y-1 active:translate-y-0'}
+                            `}
+                        >
+                            {savingPayments ? (
+                                <>
+                                    <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                                    Salvando...
+                                </>
+                            ) : (
+                                <>
+                                    <Save size={20} /> Salvar Pagamentos
+                                </>
+                            )}
+                        </button>
+                    </div>
                 </div>
             )}
 
             {/* Modals */}
             {/* ... Other modals (Enroll, Create, Edit, Delete) same as before ... */}
             {/* Enrollment Modal */}
-            {showEnrollModal && (
-                <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4 animate-fade-in">
-                    <div className="glass-card w-full max-w-md max-h-[80vh] overflow-y-auto animate-slide-up relative">
-                        <button onClick={() => setShowEnrollModal(false)} className="absolute top-4 right-4 text-text-muted hover:text-white">
-                            <X size={20} />
-                        </button>
-                        <h3 className="text-xl mb-4 font-bold text-white">Matricular Aluno Existente</h3>
-                        <div className="flex flex-col gap-2">
-                            {allStudents.filter(s => !students.find(st => st.id === s.id)).map(s => (
-                                <button key={s.id} onClick={() => handleEnrollStudent(s.id)} className="p-3 rounded-lg bg-bg-dark/50 border border-white/5 hover:bg-white/10 flex justify-between items-center text-left text-text-main transition-colors">
-                                    <span>{s.name}</span> <Plus size={16} className="text-primary" />
-                                </button>
-                            ))}
-                        </div>
-                    </div>
-                </div>
-            )}
+            {/* Manage Students Modal */}
+            {/* Manage Students Modal */}
+            <ManageStudentsModal
+                isOpen={showEnrollModal}
+                onClose={() => setShowEnrollModal(false)}
+                students={allStudents}
+                enrolledStudentIds={students.map(s => s.id)}
+                onEnroll={handleEnrollStudent}
+                onUnenroll={handleUnenrollStudent}
+            />
 
             {/* Create Student Modal */}
             {showCreateStudentModal && (
@@ -795,6 +908,45 @@ export const ClassDetails = () => {
                                     placeholder="Ex: João Silva"
                                     required
                                     autoFocus
+                                />
+                            </div>
+                            <div>
+                                <label className="text-xs font-medium text-text-muted uppercase tracking-wider ml-1">Celular</label>
+                                <input
+                                    className="w-full p-3 bg-bg-dark/50 border border-border rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all"
+                                    value={newStudentData.phone}
+                                    onChange={e => setNewStudentData({ ...newStudentData, phone: formatPhone(e.target.value) })}
+                                    maxLength={15}
+                                    placeholder="(99) 99999-9999"
+                                />
+                            </div>
+                            <div className="grid grid-cols-2 gap-4">
+                                <div>
+                                    <label className="text-xs font-medium text-text-muted uppercase tracking-wider ml-1">Responsável</label>
+                                    <input
+                                        className="w-full p-3 bg-bg-dark/50 border border-border rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all"
+                                        value={newStudentData.parent_name}
+                                        onChange={e => setNewStudentData({ ...newStudentData, parent_name: e.target.value })}
+                                    />
+                                </div>
+                                <div>
+                                    <label className="text-xs font-medium text-text-muted uppercase tracking-wider ml-1">Cel. Responsável</label>
+                                    <input
+                                        className="w-full p-3 bg-bg-dark/50 border border-border rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all"
+                                        value={newStudentData.parent_phone}
+                                        onChange={e => setNewStudentData({ ...newStudentData, parent_phone: formatPhone(e.target.value) })}
+                                        maxLength={15}
+                                        placeholder="(99) 99999-9999"
+                                    />
+                                </div>
+                            </div>
+                            <div>
+                                <label className="text-xs font-medium text-text-muted uppercase tracking-wider ml-1">Email Responsável</label>
+                                <input
+                                    type="email"
+                                    className="w-full p-3 bg-bg-dark/50 border border-border rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all"
+                                    value={newStudentData.parent_email}
+                                    onChange={e => setNewStudentData({ ...newStudentData, parent_email: e.target.value })}
                                 />
                             </div>
                             <div className="flex justify-end gap-3 mt-6">
@@ -827,6 +979,45 @@ export const ClassDetails = () => {
                                     onChange={e => setEditStudentData({ ...editStudentData, name: e.target.value })}
                                     required
                                     autoFocus
+                                />
+                            </div>
+                            <div>
+                                <label className="text-xs font-medium text-text-muted uppercase tracking-wider ml-1">Celular</label>
+                                <input
+                                    className="w-full p-3 bg-bg-dark/50 border border-border rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all"
+                                    value={editStudentData.phone}
+                                    onChange={e => setEditStudentData({ ...editStudentData, phone: formatPhone(e.target.value) })}
+                                    maxLength={15}
+                                    placeholder="(99) 99999-9999"
+                                />
+                            </div>
+                            <div className="grid grid-cols-2 gap-4">
+                                <div>
+                                    <label className="text-xs font-medium text-text-muted uppercase tracking-wider ml-1">Responsável</label>
+                                    <input
+                                        className="w-full p-3 bg-bg-dark/50 border border-border rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all"
+                                        value={editStudentData.parent_name}
+                                        onChange={e => setEditStudentData({ ...editStudentData, parent_name: e.target.value })}
+                                    />
+                                </div>
+                                <div>
+                                    <label className="text-xs font-medium text-text-muted uppercase tracking-wider ml-1">Cel. Responsável</label>
+                                    <input
+                                        className="w-full p-3 bg-bg-dark/50 border border-border rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all"
+                                        value={editStudentData.parent_phone}
+                                        onChange={e => setEditStudentData({ ...editStudentData, parent_phone: formatPhone(e.target.value) })}
+                                        maxLength={15}
+                                        placeholder="(99) 99999-9999"
+                                    />
+                                </div>
+                            </div>
+                            <div>
+                                <label className="text-xs font-medium text-text-muted uppercase tracking-wider ml-1">Email Responsável</label>
+                                <input
+                                    type="email"
+                                    className="w-full p-3 bg-bg-dark/50 border border-border rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all"
+                                    value={editStudentData.parent_email}
+                                    onChange={e => setEditStudentData({ ...editStudentData, parent_email: e.target.value })}
                                 />
                             </div>
                             <div className="flex justify-end gap-3 mt-6">

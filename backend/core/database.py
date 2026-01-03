@@ -4,19 +4,15 @@ from sqlalchemy.orm import sessionmaker
 
 import os
 
-# Build path relative to this file (backend/core/database.py)
-# We want to go up two levels: backend/core/ -> backend/ -> root/
-BASE_DIR = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+POSTGRES_USER = os.getenv("POSTGRES_USER", "postgres")
+POSTGRES_PASSWORD = os.getenv("POSTGRES_PASSWORD", "postgres")
+POSTGRES_SERVER = os.getenv("POSTGRES_SERVER", "db")
+POSTGRES_PORT = os.getenv("POSTGRES_PORT", "5432")
+POSTGRES_DB = os.getenv("POSTGRES_DB", "student_management")
 
-db_path = os.getenv("DB_PATH")
-if not db_path:
-    db_path = os.path.join(BASE_DIR, "student_management.db")
+DATABASE_URL = f"postgresql://{POSTGRES_USER}:{POSTGRES_PASSWORD}@{POSTGRES_SERVER}:{POSTGRES_PORT}/{POSTGRES_DB}"
 
-SQLALCHEMY_DATABASE_URL = f"sqlite:///{db_path}"
-
-engine = create_engine(
-    SQLALCHEMY_DATABASE_URL, connect_args={"check_same_thread": False}
-)
+engine = create_engine(DATABASE_URL)
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
 Base = declarative_base()

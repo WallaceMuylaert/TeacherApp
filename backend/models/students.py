@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, ForeignKey
+from sqlalchemy import Column, Integer, String, ForeignKey, Boolean
 from sqlalchemy.orm import relationship
 from backend.core.database import Base
 
@@ -11,6 +11,9 @@ class Student(Base):
     parent_name = Column(String, nullable=True)
     parent_phone = Column(String, nullable=True)
     parent_email = Column(String, nullable=True)
+    school_year = Column(String, nullable=True)
+    class_type = Column(String, nullable=True)
+    active = Column(Boolean, default=True)
     owner_id = Column(Integer, ForeignKey("users.id"))
 
     owner = relationship("User", back_populates="students")

@@ -21,7 +21,7 @@ def read_payments(
     current_user: user_schemas.User = Depends(security.get_current_user)
 ):
     # In a real app, restrict to students owned by user, but skipping complex join for brevity
-    return payment_crud.get_payments(db, student_id=student_id, year=year, month=month, skip=skip, limit=limit, search=search)
+    return payment_crud.get_payments(db, user_id=current_user.id, student_id=student_id, year=year, month=month, skip=skip, limit=limit, search=search)
 
 @router.post("/payments/", response_model=payment_schemas.Payment)
 def create_payment(
@@ -34,14 +34,14 @@ def create_payment(
     # verify ownership...
     return payment_crud.create_payment(db=db, payment=payment)
 
-@router.put("/payments/{payment_id}/status")
-def update_payment_status(
+@router.put("/payments/{payment_id}", response_model=payment_schemas.Payment)
+def update_payment(
     payment_id: int, 
-    status: str, 
+    payment: payment_schemas.PaymentCreate, 
     db: Session = Depends(database.get_db), 
     current_user: user_schemas.User = Depends(security.get_current_user)
 ):
-    return payment_crud.update_payment_status(db, payment_id=payment_id, status=status)
+    return payment_crud.update_payment(db, payment_id=payment_id, payment_data=payment)
 
 from docx import Document
 from docx.shared import Inches, Pt, RGBColor
@@ -61,7 +61,7 @@ def generate_monthly_report(
     all_students = student_crud.get_students(db, user_id=current_user.id, limit=1000)
     
     # 2. Get payments for the month
-    payments = payment_crud.get_payments(db, year=year, month=month, limit=1000)
+    payments = payment_crud.get_payments(db, user_id=current_user.id, year=year, month=month, limit=1000)
     
     # 3. Calculate Stats
     total_students = len(all_students)
@@ -84,6 +84,8 @@ def generate_monthly_report(
         student_status_list.append({
             "name": student.name,
             "parent": student.parent_name or "-",
+            "school_year": student.school_year or "-",
+            "class_type": student.class_type or "-",
             "status": status_label,
             "amount": payment.amount if payment else 0.0
         })
@@ -117,13 +119,15 @@ def generate_monthly_report(
     # Detailed List
     document.add_heading('Detalhamento por Aluno', level=1)
     
-    table = document.add_table(rows=1, cols=4)
+    table = document.add_table(rows=1, cols=6)
     table.style = 'Table Grid'
     hdr_cells = table.rows[0].cells
     hdr_cells[0].text = 'Aluno'
     hdr_cells[1].text = 'Responsável'
-    hdr_cells[2].text = 'Status'
-    hdr_cells[3].text = 'Valor Pago'
+    hdr_cells[2].text = 'Ano Escolar'
+    hdr_cells[3].text = 'Tipo de Aula'
+    hdr_cells[4].text = 'Status'
+    hdr_cells[5].text = 'Valor Pago'
     
     for cell in hdr_cells:
         cell.paragraphs[0].runs[0].bold = True
@@ -132,8 +136,10 @@ def generate_monthly_report(
         row_cells = table.add_row().cells
         row_cells[0].text = item["name"]
         row_cells[1].text = item["parent"]
-        row_cells[2].text = item["status"]
-        row_cells[3].text = f"R$ {item['amount']:.2f}" if item["amount"] > 0 else "-"
+        row_cells[2].text = item["school_year"]
+        row_cells[3].text = item["class_type"]
+        row_cells[4].text = item["status"]
+        row_cells[5].text = f"R$ {item['amount']:.2f}" if item["amount"] > 0 else "-"
         
     # Save to stream
     file_stream = io.BytesIO()
