@@ -92,43 +92,45 @@ export const Dashboard = () => {
                     <Loading text="Carregando turmas..." />
                 </div>
             ) : (
-                <div className="grid gap-6 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 animate-slide-up">
-                    {classes.map((cls, index) => (
-                        <Link
-                            key={cls.id}
-                            to={`/class/${cls.id}`}
-                            className="glass-card p-6 group hover:translate-y-[-5px] transition-all duration-300 block no-underline text-inherit border-l-4 border-l-transparent hover:border-l-primary"
-                            style={{ animationDelay: `${index * 100}ms` }}
-                        >
-                            <div className="flex justify-between items-start">
-                                <div>
-                                    <h3 className="text-xl font-bold mb-2 text-text-main group-hover:text-primary-light transition-colors">{cls.name}</h3>
-                                    <p className="text-text-muted text-sm flex items-center gap-2">
-                                        <Calendar size={14} className="text-primary" /> {cls.schedule}
-                                    </p>
+                <div className="animate-slide-up space-y-8">
+                    <div className="grid gap-6 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
+                        {classes.map((cls, index) => (
+                            <Link
+                                key={cls.id}
+                                to={`/class/${cls.id}`}
+                                className="glass-card p-6 group hover:translate-y-[-5px] transition-all duration-300 block no-underline text-inherit border-l-4 border-l-transparent hover:border-l-primary"
+                                style={{ animationDelay: `${index * 100}ms` }}
+                            >
+                                <div className="flex justify-between items-start">
+                                    <div>
+                                        <h3 className="text-xl font-bold mb-2 text-text-main group-hover:text-primary-light transition-colors">{cls.name}</h3>
+                                        <p className="text-text-muted text-sm flex items-center gap-2">
+                                            <Calendar size={14} className="text-primary" /> {cls.schedule}
+                                        </p>
+                                    </div>
+                                    <div className="flex gap-2">
+                                        <button onClick={(e) => openEditModal(e, cls)} className="bg-bg-dark/50 p-2 rounded-lg hover:bg-primary/20 text-text-muted hover:text-primary transition-colors">
+                                            <Pencil size={18} />
+                                        </button>
+                                        <button onClick={(e) => openDeleteModal(e, cls)} className="bg-bg-dark/50 p-2 rounded-lg hover:bg-danger/20 text-text-muted hover:text-danger transition-colors">
+                                            <Trash size={18} />
+                                        </button>
+                                    </div>
                                 </div>
-                                <div className="flex gap-2">
-                                    <button onClick={(e) => openEditModal(e, cls)} className="bg-bg-dark/50 p-2 rounded-lg hover:bg-primary/20 text-text-muted hover:text-primary transition-colors">
-                                        <Pencil size={18} />
-                                    </button>
-                                    <button onClick={(e) => openDeleteModal(e, cls)} className="bg-bg-dark/50 p-2 rounded-lg hover:bg-danger/20 text-text-muted hover:text-danger transition-colors">
-                                        <Trash size={18} />
-                                    </button>
-                                </div>
-                            </div>
-                        </Link>
-                    ))}
+                            </Link>
+                        ))}
 
-                    {/* Add Class Card Button */}
-                    <button
-                        onClick={() => setShowModal(true)}
-                        className="glass-card p-6 flex flex-col items-center justify-center gap-4 group hover:bg-white/5 transition-all border-dashed border-2 border-border hover:border-primary cursor-pointer min-h-[150px]"
-                    >
-                        <div className="bg-primary/10 p-4 rounded-full group-hover:scale-110 transition-transform">
-                            <Plus size={32} className="text-primary" />
-                        </div>
-                        <span className="font-medium text-text-muted group-hover:text-white transition-colors">Criar Nova Turma</span>
-                    </button>
+                        {/* Add Class Card Button */}
+                        <button
+                            onClick={() => setShowModal(true)}
+                            className="glass-card p-6 flex flex-col items-center justify-center gap-4 group hover:bg-white/5 transition-all border-dashed border-2 border-border hover:border-primary cursor-pointer min-h-[150px]"
+                        >
+                            <div className="bg-primary/10 p-4 rounded-full group-hover:scale-110 transition-transform">
+                                <Plus size={32} className="text-primary" />
+                            </div>
+                            <span className="font-medium text-text-muted group-hover:text-white transition-colors">Criar Nova Turma</span>
+                        </button>
+                    </div>
                 </div>
             )}
 

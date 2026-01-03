@@ -5,8 +5,8 @@ from typing import List, Optional
 
 from backend.models.students import Student
 
-def get_payments(db: Session, student_id: Optional[int] = None, year: Optional[int] = None, month: Optional[int] = None, skip: int = 0, limit: int = 100, search: Optional[str] = None):
-    query = db.query(Payment).join(Student, Payment.student_id == Student.id)
+def get_payments(db: Session, user_id: int, student_id: Optional[int] = None, year: Optional[int] = None, month: Optional[int] = None, skip: int = 0, limit: int = 100, search: Optional[str] = None):
+    query = db.query(Payment).join(Student, Payment.student_id == Student.id).filter(Student.owner_id == user_id)
     
     if student_id:
         query = query.filter(Payment.student_id == student_id)
