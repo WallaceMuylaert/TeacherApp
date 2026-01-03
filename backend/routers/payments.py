@@ -34,14 +34,14 @@ def create_payment(
     # verify ownership...
     return payment_crud.create_payment(db=db, payment=payment)
 
-@router.put("/payments/{payment_id}/status")
-def update_payment_status(
+@router.put("/payments/{payment_id}", response_model=payment_schemas.Payment)
+def update_payment(
     payment_id: int, 
-    status: str, 
+    payment: payment_schemas.PaymentCreate, 
     db: Session = Depends(database.get_db), 
     current_user: user_schemas.User = Depends(security.get_current_user)
 ):
-    return payment_crud.update_payment_status(db, payment_id=payment_id, status=status)
+    return payment_crud.update_payment(db, payment_id=payment_id, payment_data=payment)
 
 from docx import Document
 from docx.shared import Inches, Pt, RGBColor

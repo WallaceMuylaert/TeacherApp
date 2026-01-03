@@ -1,4 +1,4 @@
-import React from 'react';
+
 import { useNavigate } from 'react-router-dom';
 import { Ghost, Home, ArrowLeft } from 'lucide-react';
 

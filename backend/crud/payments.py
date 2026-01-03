@@ -33,10 +33,12 @@ def create_payment(db: Session, payment: PaymentCreate):
     db.refresh(db_payment)
     return db_payment
 
-def update_payment_status(db: Session, payment_id: int, status: str):
+def update_payment(db: Session, payment_id: int, payment_data: PaymentCreate):
     payment = db.query(Payment).filter(Payment.id == payment_id).first()
     if payment:
-        payment.status = status
+        payment.status = payment_data.status
+        payment.amount = payment_data.amount
+        payment.paid_at = payment_data.paid_at
         db.commit()
         db.refresh(payment)
     return payment
