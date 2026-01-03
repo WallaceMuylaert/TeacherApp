@@ -1,9 +1,10 @@
 import React, { useEffect, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import api from '../api';
-import { Plus, Save, Calendar, UserPlus, Users, X, FileText, Pencil, Trash2, AlertTriangle, Eye, Download } from 'lucide-react';
+import { Plus, Save, Calendar, Users, X, FileText, Pencil, Trash2, AlertTriangle, Eye, Download } from 'lucide-react';
 import { formatPhone, unmaskPhone } from '../utils/masks';
 import { Loading } from '../components/Loading';
+import { ManageStudentsModal } from '../components/ManageStudentsModal';
 
 interface Student {
     id: number;
@@ -160,8 +161,23 @@ export const ClassDetails = () => {
         try {
             await api.post(`/classes/${id}/enroll/${studentId}`);
             fetchStudents();
-            setShowEnrollModal(false);
-        } catch (e) { alert('Erro ao matricular'); }
+            showNotification('Aluno matriculado!', 'success');
+        } catch (e) { showNotification('Erro ao matricular', 'error'); }
+    };
+
+    const handleUnenrollStudent = async (studentId: number) => {
+        requestConfirmation(
+            'Remover Aluno da Turma?',
+            <>Tem certeza que deseja remover este aluno da turma? O histórico de presença <strong>desta turma</strong> será mantido, mas ele não aparecerá mais na lista.</>,
+            async () => {
+                try {
+                    await api.delete(`/classes/${id}/enroll/${studentId}`);
+                    fetchStudents();
+                    showNotification('Aluno removido da turma!', 'success');
+                } catch (e) { showNotification('Erro ao remover aluno', 'error'); }
+            },
+            'warning'
+        );
     };
 
     const fetchPayments = async () => {
@@ -508,7 +524,7 @@ export const ClassDetails = () => {
                         <div className="flex flex-col sm:flex-row justify-between mb-6 gap-4 border-b border-white/5 pb-4">
                             <h2 className="text-xl font-bold flex items-center gap-2"><Users className="text-primary" size={20} /> Alunos Matriculados <span className="bg-bg-dark px-2 py-0.5 rounded-full text-xs text-text-muted">{students.length}</span></h2>
                             <div className="flex flex-col sm:flex-row gap-3">
-                                <button onClick={loadAllStudents} className="btn-outline text-sm px-3 py-1.5"><UserPlus size={16} /> Matricular Existente</button>
+                                <button onClick={loadAllStudents} className="btn-outline text-sm px-3 py-1.5"><Users size={16} /> Gerenciar Alunos</button>
                                 <button onClick={() => setShowCreateStudentModal(true)} className="bg-primary hover:bg-primary-hover text-white px-3 py-1.5 rounded-lg text-sm font-medium flex items-center gap-2 shadow-lg shadow-primary/20"><Plus size={16} /> Novo Aluno</button>
                             </div>
                         </div>
@@ -567,7 +583,7 @@ export const ClassDetails = () => {
                             </h2>
                             <div className="flex items-center gap-3">
                                 <button onClick={loadAllStudents} className="btn-outline text-sm px-3 py-1.5 border-white/10 hover:bg-white/5">
-                                    <UserPlus size={16} /> Matricular Aluno
+                                    <Users size={16} /> Gerenciar Alunos
                                 </button>
                                 <div className="text-sm text-text-muted bg-bg-dark px-3 py-1 rounded-lg border border-white/5">
                                     {new Date().toLocaleDateString()}
@@ -772,23 +788,16 @@ export const ClassDetails = () => {
             {/* Modals */}
             {/* ... Other modals (Enroll, Create, Edit, Delete) same as before ... */}
             {/* Enrollment Modal */}
-            {showEnrollModal && (
-                <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4 animate-fade-in">
-                    <div className="glass-card w-full max-w-md max-h-[80vh] overflow-y-auto animate-slide-up relative">
-                        <button onClick={() => setShowEnrollModal(false)} className="absolute top-4 right-4 text-text-muted hover:text-white">
-                            <X size={20} />
-                        </button>
-                        <h3 className="text-xl mb-4 font-bold text-white">Matricular Aluno Existente</h3>
-                        <div className="flex flex-col gap-2">
-                            {allStudents.filter(s => !students.find(st => st.id === s.id)).map(s => (
-                                <button key={s.id} onClick={() => handleEnrollStudent(s.id)} className="p-3 rounded-lg bg-bg-dark/50 border border-white/5 hover:bg-white/10 flex justify-between items-center text-left text-text-main transition-colors">
-                                    <span>{s.name}</span> <Plus size={16} className="text-primary" />
-                                </button>
-                            ))}
-                        </div>
-                    </div>
-                </div>
-            )}
+            {/* Manage Students Modal */}
+            {/* Manage Students Modal */}
+            <ManageStudentsModal
+                isOpen={showEnrollModal}
+                onClose={() => setShowEnrollModal(false)}
+                students={allStudents}
+                enrolledStudentIds={students.map(s => s.id)}
+                onEnroll={handleEnrollStudent}
+                onUnenroll={handleUnenrollStudent}
+            />
 
             {/* Create Student Modal */}
             {showCreateStudentModal && (

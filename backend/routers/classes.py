@@ -71,5 +71,9 @@ def create_attendance_session(class_id: int, session: attendance_schemas.Attenda
 
 @router.post("/classes/{class_id}/enroll/{student_id}")
 def enroll_student_in_class(class_id: int, student_id: int, db: Session = Depends(database.get_db), current_user: user_schemas.User = Depends(security.get_current_user)):
-    # Verify both belong to user
     return enrollment_crud.enroll_student(db, class_id=class_id, student_id=student_id)
+
+@router.delete("/classes/{class_id}/enroll/{student_id}")
+def unenroll_student_from_class(class_id: int, student_id: int, db: Session = Depends(database.get_db), current_user: user_schemas.User = Depends(security.get_current_user)):
+    enrollment_crud.unenroll_student(db, class_id=class_id, student_id=student_id)
+    return {"message": "Student unenrolled successfully"}
