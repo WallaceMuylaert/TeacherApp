@@ -31,6 +31,9 @@ def update_student(db: Session, student_id: int, student_data: StudentCreate):
         student.parent_name = student_data.parent_name
         student.parent_phone = student_data.parent_phone
         student.parent_email = student_data.parent_email
+        student.school_year = student_data.school_year
+        student.class_type = student_data.class_type
+        student.active = student_data.active
         db.commit()
         db.refresh(student)
     return student
