@@ -21,7 +21,7 @@ def read_payments(
     current_user: user_schemas.User = Depends(security.get_current_user)
 ):
     # In a real app, restrict to students owned by user, but skipping complex join for brevity
-    return payment_crud.get_payments(db, student_id=student_id, year=year, month=month, skip=skip, limit=limit, search=search)
+    return payment_crud.get_payments(db, user_id=current_user.id, student_id=student_id, year=year, month=month, skip=skip, limit=limit, search=search)
 
 @router.post("/payments/", response_model=payment_schemas.Payment)
 def create_payment(
@@ -61,7 +61,7 @@ def generate_monthly_report(
     all_students = student_crud.get_students(db, user_id=current_user.id, limit=1000)
     
     # 2. Get payments for the month
-    payments = payment_crud.get_payments(db, year=year, month=month, limit=1000)
+    payments = payment_crud.get_payments(db, user_id=current_user.id, year=year, month=month, limit=1000)
     
     # 3. Calculate Stats
     total_students = len(all_students)
