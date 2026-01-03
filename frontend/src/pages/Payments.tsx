@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import api from '../api';
 import { DollarSign, CheckCircle, AlertCircle, Search } from 'lucide-react';
+import { formatCurrency, parseCurrency } from '../utils/masks';
 import { Loading } from '../components/Loading';
 
 interface Student {
@@ -8,6 +9,8 @@ interface Student {
     name: string;
     parent_name?: string;
     parent_phone?: string;
+    school_year?: string;
+    class_type?: string;
 }
 
 interface Payment {
@@ -17,6 +20,14 @@ interface Payment {
     year: number;
     status: string; // 'PENDING', 'PAID', 'LATE'
     amount: number;
+}
+
+interface PaymentInput {
+    student_id: number;
+    status: string;
+    amount: number;
+    id?: number;
+    paid_at?: string | null;
 }
 
 export const Payments = () => {
@@ -31,6 +42,10 @@ export const Payments = () => {
     const [search, setSearch] = useState('');
     const [page, setPage] = useState(0);
     const [limit] = useState(10);
+
+    // Local State for Batch Edits
+    const [localPayments, setLocalPayments] = useState<Record<number, PaymentInput>>({});
+    const [saving, setSaving] = useState(false);
 
     // Notification
     const [toast, setToast] = useState<{ msg: string, type: 'success' | 'error' } | null>(null);
@@ -61,8 +76,65 @@ export const Payments = () => {
             setStudents(studentsRes.data);
             setAllStudentIds(allStudentsRes.data.map((s: Student) => s.id));
             setPayments(paymentsRes.data);
+
+            // Initialize Local State for current page students
+            const initialPayments: Record<number, PaymentInput> = {};
+            studentsRes.data.forEach((s: Student) => {
+                const existing = paymentsRes.data.find((p: Payment) => p.student_id === s.id);
+                initialPayments[s.id] = existing ? {
+                    ...existing,
+                    amount: existing.amount || 0
+                } : {
+                    student_id: s.id,
+                    status: 'PENDING',
+                    amount: 0
+                };
+            });
+            setLocalPayments(initialPayments);
+
         } catch (e) { console.error(e); }
         finally { setLoading(false); }
+    };
+
+    const updateLocalPayment = (studentId: number, field: keyof PaymentInput, value: any) => {
+        setLocalPayments(prev => ({
+            ...prev,
+            [studentId]: { ...prev[studentId], [field]: value }
+        }));
+    };
+
+    const handleSavePayments = async () => {
+        setSaving(true);
+        try {
+            const updates = Object.values(localPayments);
+            await Promise.all(updates.map(async (p) => {
+                // Only save if it's one of the currently visible students to avoid accidental overwrites?
+                // Actually we only populate localPayments with current page.
+
+                const payload = {
+                    student_id: p.student_id,
+                    month: selectedMonth,
+                    year: selectedYear,
+                    status: p.status,
+                    amount: Number(p.amount),
+                    paid_at: p.status === 'PAID' ? new Date().toISOString().split('T')[0] : null
+                };
+
+                if (p.id) {
+                    await api.put(`/payments/${p.id}`, payload);
+                } else {
+                    await api.post('/payments/', payload);
+                }
+            }));
+
+            showToast('Pagamentos salvos com sucesso!', 'success');
+            fetchData();
+        } catch (e) {
+            console.error(e);
+            showToast('Erro ao salvar pagamentos', 'error');
+        } finally {
+            setSaving(false);
+        }
     };
 
     // Calculate stats (based on ALL students, not just current page)
@@ -76,28 +148,7 @@ export const Payments = () => {
     const pendingCount = totalStudents - actualPaidCount;
 
 
-    const handleTogglePayment = async (studentId: number, currentStatus: string, paymentId?: number) => {
-        const newStatus = currentStatus === 'PAID' ? 'PENDING' : 'PAID';
-        try {
-            if (paymentId) {
-                await api.put(`/payments/${paymentId}/status?status=${newStatus}`);
-            } else {
-                await api.post('/payments/', {
-                    student_id: studentId,
-                    month: selectedMonth,
-                    year: selectedYear,
-                    amount: 0,
-                    status: newStatus,
-                    paid_at: newStatus === 'PAID' ? new Date().toISOString().split('T')[0] : null
-                });
-            }
-            // Optimistic update or refresh
-            fetchData();
-            showToast('Pagamento atualizado!', 'success');
-        } catch (e) {
-            showToast('Erro ao atualizar', 'error');
-        }
-    };
+
 
     const showToast = (msg: string, type: 'success' | 'error') => {
         setToast({ msg, type });
@@ -215,6 +266,17 @@ export const Payments = () => {
                 )}
                 <div className="p-4 border-b border-white/5 bg-white/5 flex items-center justify-between">
                     <h3 className="font-bold text-white">Relatório de {selectedMonth}/{selectedYear}</h3>
+                    <button
+                        onClick={handleSavePayments}
+                        disabled={saving}
+                        className={`
+                             bg-gradient-to-r from-success to-success-hover text-white px-6 py-2 rounded-lg font-bold shadow-lg shadow-success/25 
+                             transition-all flex items-center gap-2 text-sm
+                             ${saving ? 'opacity-70 cursor-wait' : 'hover:shadow-success/40 hover:-translate-y-1 active:translate-y-0'}
+                        `}
+                    >
+                        {saving ? 'Salvando...' : <><DollarSign size={16} /> Salvar Alterações</>}
+                    </button>
                 </div>
                 <div className="overflow-x-auto">
                     <table className="w-full">
@@ -224,16 +286,16 @@ export const Payments = () => {
                                 <th className="text-left p-4 text-xs font-bold text-text-muted uppercase tracking-wider">Responsável</th>
                                 <th className="text-left p-4 text-xs font-bold text-text-muted uppercase tracking-wider">Ano Escolar</th>
                                 <th className="text-left p-4 text-xs font-bold text-text-muted uppercase tracking-wider">Tipo de Aula</th>
-                                <th className="text-center p-4 text-xs font-bold text-text-muted uppercase tracking-wider">Status</th>
-                                <th className="text-right p-4 text-xs font-bold text-text-muted uppercase tracking-wider">Ação</th>
+                                <th className="text-left p-4 text-xs font-bold text-text-muted uppercase tracking-wider w-[180px]">Status</th>
+                                <th className="text-left p-4 text-xs font-bold text-text-muted uppercase tracking-wider w-[180px]">Valor Pago</th>
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-white/5">
                             {students.map(student => {
-                                const payment = payments.find(p => p.student_id === student.id);
-                                const isPaid = payment?.status === 'PAID';
+                                const payment = localPayments[student.id] || { status: 'PENDING', amount: 0, student_id: student.id };
+                                const isPaid = payment.status === 'PAID';
                                 return (
-                                    <tr key={student.id} className="hover:bg-white/5 transition-colors">
+                                    <tr key={student.id} className="hover:bg-white/5 transition-colors group">
                                         <td className="p-4 font-medium text-white">{student.name}</td>
                                         <td className="p-4">
                                             <div className="text-sm text-text-muted">{student.parent_name || '-'}</div>
@@ -241,27 +303,36 @@ export const Payments = () => {
                                         </td>
                                         <td className="p-4 text-left">{student.school_year || '-'}</td>
                                         <td className="p-4 text-left">{student.class_type || '-'}</td>
-                                        <td className="p-4 text-center">
-                                            <span className={`px-3 py-1 rounded-full text-xs font-bold border ${isPaid ? 'bg-success/10 border-success/30 text-success' : 'bg-warning/10 border-warning/30 text-warning'}`}>
-                                                {isPaid ? 'PAGO' : 'PENDENTE'}
-                                            </span>
-                                        </td>
-                                        <td className="p-4 text-right">
-                                            <button
-                                                onClick={() => handleTogglePayment(student.id, payment?.status || 'PENDING', payment?.id)}
-                                                className={`px-4 py-1.5 rounded-lg text-xs font-bold transition-all ${isPaid
-                                                    ? 'bg-transparent border border-white/20 text-text-muted hover:border-danger hover:text-danger hover:bg-danger/10'
-                                                    : 'bg-success text-white hover:bg-success-hover shadow-lg shadow-success/20'
-                                                    }`}
+                                        <td className="p-4">
+                                            <select
+                                                className={`w-full p-2 rounded-lg text-sm border-none focus:ring-2 focus:ring-primary outline-none transition-colors cursor-pointer ${isPaid ? 'bg-success/20 text-success' : 'bg-warning/20 text-warning'}`}
+                                                value={payment.status}
+                                                onChange={e => updateLocalPayment(student.id, 'status', e.target.value)}
                                             >
-                                                {isPaid ? 'Desmarcar' : 'Confirmar Pagamento'}
-                                            </button>
+                                                <option value="PENDING">Pendente</option>
+                                                <option value="PAID">Pago</option>
+                                            </select>
+                                        </td>
+                                        <td className="p-4">
+                                            <div className="relative">
+                                                <input
+                                                    type="text"
+                                                    className={`w-full bg-transparent border-b outline-none py-1 text-sm font-mono transition-colors text-right ${isPaid
+                                                        ? 'border-white/10 focus:border-primary text-white'
+                                                        : 'border-transparent text-text-muted cursor-not-allowed'
+                                                        }`}
+                                                    value={formatCurrency(payment.amount)}
+                                                    onChange={e => updateLocalPayment(student.id, 'amount', parseCurrency(e.target.value))}
+                                                    disabled={!isPaid}
+                                                    placeholder="R$ 0,00"
+                                                />
+                                            </div>
                                         </td>
                                     </tr>
                                 );
                             })}
                             {students.length === 0 && !loading && (
-                                <tr><td colSpan={4} className="p-8 text-center text-text-muted">Nenhum aluno encontrado.</td></tr>
+                                <tr><td colSpan={6} className="p-8 text-center text-text-muted">Nenhum aluno encontrado.</td></tr>
                             )}
                         </tbody>
                     </table>
