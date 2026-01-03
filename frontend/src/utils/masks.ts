@@ -36,5 +36,6 @@ export const formatCurrency = (value: string | number) => {
 export const parseCurrency = (value: string) => {
     if (!value) return 0;
     const numericValue = value.replace(/\D/g, "");
-    return parseFloat(numericValue) / 100;
+    const floatValue = parseFloat(numericValue);
+    return isNaN(floatValue) ? 0 : floatValue / 100;
 };
