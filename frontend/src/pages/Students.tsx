@@ -381,7 +381,7 @@ export const Students = () => {
                                 <div>
                                     <label className="text-xs font-medium text-text-muted uppercase tracking-wider ml-1">Ano Escolar</label>
                                     <input className="w-full p-3 bg-bg-dark/50 border border-border rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-primary"
-                                        value={newStudentData.school_year} onChange={e => setNewStudentData({ ...newStudentData, school_year: e.target.value })} 
+                                        value={newStudentData.school_year} onChange={e => setNewStudentData({ ...newStudentData, school_year: e.target.value })}
                                         placeholder="Ex: 5º Ano" />
                                 </div>
                                 <div>
@@ -394,13 +394,14 @@ export const Students = () => {
                                     </select>
                                 </div>
                             </div>
-                            <div className="flex items-center gap-2">
-                                <input type="checkbox" id="new_active" 
-                                    checked={newStudentData.active} 
-                                    onChange={e => setNewStudentData({ ...newStudentData, active: e.target.checked })}
-                                    className="w-4 h-4 rounded border-gray-300 text-primary focus:ring-primary accent-primary"
-                                />
-                                <label htmlFor="new_active" className="text-sm text-white">Aluno Ativo</label>
+                            <div
+                                className="flex items-center gap-3 bg-bg-dark/30 p-3 rounded-lg border border-white/5 cursor-pointer hover:bg-bg-dark/50 transition-colors"
+                                onClick={() => setNewStudentData({ ...newStudentData, active: !newStudentData.active })}
+                            >
+                                <div className={`w-10 h-5 rounded-full relative transition-colors duration-300 ${newStudentData.active ? 'bg-primary' : 'bg-white/10'}`}>
+                                    <div className={`w-3 h-3 rounded-full bg-white absolute top-1 shadow-sm transition-transform duration-300 ${newStudentData.active ? 'translate-x-[22px]' : 'translate-x-1'}`} />
+                                </div>
+                                <span className="text-sm font-medium text-white select-none">Aluno Ativo</span>
                             </div>
 
                             <div className="pt-2 border-t border-white/10 mt-2">
@@ -469,7 +470,7 @@ export const Students = () => {
                                 <div>
                                     <label className="text-xs font-medium text-text-muted uppercase tracking-wider ml-1">Ano Escolar</label>
                                     <input className="w-full p-3 bg-bg-dark/50 border border-border rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-primary"
-                                        value={editStudentData.school_year} onChange={e => setEditStudentData({ ...editStudentData, school_year: e.target.value })} 
+                                        value={editStudentData.school_year} onChange={e => setEditStudentData({ ...editStudentData, school_year: e.target.value })}
                                         placeholder="Ex: 5º Ano" />
                                 </div>
                                 <div>
@@ -482,13 +483,14 @@ export const Students = () => {
                                     </select>
                                 </div>
                             </div>
-                            <div className="flex items-center gap-2">
-                                <input type="checkbox" id="edit_active" 
-                                    checked={editStudentData.active} 
-                                    onChange={e => setEditStudentData({ ...editStudentData, active: e.target.checked })}
-                                    className="w-4 h-4 rounded border-gray-300 text-primary focus:ring-primary accent-primary"
-                                />
-                                <label htmlFor="edit_active" className="text-sm text-white">Aluno Ativo</label>
+                            <div
+                                className="flex items-center gap-3 bg-bg-dark/30 p-3 rounded-lg border border-white/5 cursor-pointer hover:bg-bg-dark/50 transition-colors"
+                                onClick={() => setEditStudentData({ ...editStudentData, active: !editStudentData.active })}
+                            >
+                                <div className={`w-10 h-5 rounded-full relative transition-colors duration-300 ${editStudentData.active ? 'bg-primary' : 'bg-white/10'}`}>
+                                    <div className={`w-3 h-3 rounded-full bg-white absolute top-1 shadow-sm transition-transform duration-300 ${editStudentData.active ? 'translate-x-[22px]' : 'translate-x-1'}`} />
+                                </div>
+                                <span className="text-sm font-medium text-white select-none">Aluno Ativo</span>
                             </div>
                             <div className="flex justify-end gap-3 mt-6">
                                 <button type="button" onClick={() => setEditingStudent(null)} className="px-4 py-2 text-text-muted hover:text-white">Cancelar</button>
